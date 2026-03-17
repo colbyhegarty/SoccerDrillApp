@@ -2,17 +2,22 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Calendar, CalendarDays, ChevronLeft, ChevronRight, Clock, Copy, Edit, Plus, Trash2, Users, X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  Alert, Modal, Pressable,
-  ScrollView, StatusBar,
+  Alert, LayoutAnimation, Platform, ScrollView, StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
+  UIManager,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { deleteSession, duplicateSession, getSessions } from '../../src/lib/sessionStorage';
 import { borderRadius, colors, spacing } from '../../src/theme/colors';
 import { Session } from '../../src/types/session';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // ── Calendar helpers ─────────────────────────────────────────────────
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -33,12 +38,10 @@ function toDateStr(y: number, m: number, d: number) {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
-// ── Calendar Modal ───────────────────────────────────────────────────
-function CalendarModal({
-  visible, onClose, onSelectDate, selectedDate, sessionDates,
+// ── Inline Calendar ─────────────────────────────────────────────────
+function InlineCalendar({
+  onSelectDate, selectedDate, sessionDates,
 }: {
-  visible: boolean;
-  onClose: () => void;
   onSelectDate: (date: string | null) => void;
   selectedDate: string | null;
   sessionDates: Set<string>;
@@ -65,67 +68,62 @@ function CalendarModal({
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
-      <View style={cal.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={cal.modal}>
-          {/* Month nav */}
-          <View style={cal.monthRow}>
-            <TouchableOpacity onPress={prevMonth} style={cal.monthBtn}>
-              <ChevronLeft size={20} color={colors.foreground} />
-            </TouchableOpacity>
-            <Text style={cal.monthLabel}>{MONTH_NAMES[viewMonth]} {viewYear}</Text>
-            <TouchableOpacity onPress={nextMonth} style={cal.monthBtn}>
-              <ChevronRight size={20} color={colors.foreground} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Day-of-week headers */}
-          <View style={cal.weekRow}>
-            {DAYS_OF_WEEK.map(d => (
-              <View key={d} style={cal.weekCell}>
-                <Text style={cal.weekText}>{d}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Day grid */}
-          <View style={cal.grid}>
-            {cells.map((day, i) => {
-              if (day === null) return <View key={`e-${i}`} style={cal.dayCell} />;
-              const dateStr = toDateStr(viewYear, viewMonth, day);
-              const isSelected = dateStr === selectedDate;
-              const isToday = dateStr === todayStr;
-              const hasSession = sessionDates.has(dateStr);
-
-              return (
-                <TouchableOpacity
-                  key={dateStr}
-                  style={[cal.dayCell, isSelected && cal.dayCellSelected]}
-                  onPress={() => { onSelectDate(isSelected ? null : dateStr); onClose(); }}
-                >
-                  <Text style={[
-                    cal.dayText,
-                    isToday && cal.dayTextToday,
-                    isSelected && cal.dayTextSelected,
-                  ]}>
-                    {day}
-                  </Text>
-                  {hasSession && !isSelected && <View style={cal.dot} />}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* Clear filter */}
-          {selectedDate && (
-            <TouchableOpacity style={cal.clearBtn} onPress={() => { onSelectDate(null); onClose(); }}>
-              <Text style={cal.clearText}>Clear Filter</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+    <View style={cal.container}>
+      {/* Month nav */}
+      <View style={cal.monthRow}>
+        <TouchableOpacity onPress={prevMonth} style={cal.monthBtn}>
+          <ChevronLeft size={20} color={colors.foreground} />
+        </TouchableOpacity>
+        <Text style={cal.monthLabel}>{MONTH_NAMES[viewMonth]} {viewYear}</Text>
+        <TouchableOpacity onPress={nextMonth} style={cal.monthBtn}>
+          <ChevronRight size={20} color={colors.foreground} />
+        </TouchableOpacity>
       </View>
-    </Modal>
+
+      {/* Day-of-week headers */}
+      <View style={cal.weekRow}>
+        {DAYS_OF_WEEK.map(d => (
+          <View key={d} style={cal.weekCell}>
+            <Text style={cal.weekText}>{d}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Day grid */}
+      <View style={cal.grid}>
+        {cells.map((day, i) => {
+          if (day === null) return <View key={`e-${i}`} style={cal.dayCell} />;
+          const dateStr = toDateStr(viewYear, viewMonth, day);
+          const isSelected = dateStr === selectedDate;
+          const isToday = dateStr === todayStr;
+          const hasSession = sessionDates.has(dateStr);
+
+          return (
+            <TouchableOpacity
+              key={dateStr}
+              style={[cal.dayCell, isSelected && cal.dayCellSelected]}
+              onPress={() => onSelectDate(isSelected ? null : dateStr)}
+            >
+              <Text style={[
+                cal.dayText,
+                isToday && cal.dayTextToday,
+                isSelected && cal.dayTextSelected,
+              ]}>
+                {day}
+              </Text>
+              {hasSession && !isSelected && <View style={cal.dot} />}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Clear filter */}
+      {selectedDate && (
+        <TouchableOpacity style={cal.clearBtn} onPress={() => onSelectDate(null)}>
+          <Text style={cal.clearText}>Clear Filter</Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }
 
@@ -176,6 +174,11 @@ export default function SessionsScreen() {
     sessions.forEach(sess => { if (sess.session_date) s.add(sess.session_date); });
     return s;
   }, [sessions]);
+
+  const toggleCalendar = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setCalendarOpen(prev => !prev);
+  };
 
   const displayedSessions = filterDate
     ? sessions.filter(s => s.session_date === filterDate)
@@ -236,8 +239,8 @@ export default function SessionsScreen() {
           <Text style={st.headerTitle}>My Sessions</Text>
         </View>
         <View style={st.headerRight}>
-          <TouchableOpacity style={[st.headerBtn, filterDate && st.headerBtnActive]} onPress={() => setCalendarOpen(true)}>
-            <Calendar size={22} color={filterDate ? colors.primaryForeground : colors.foreground} />
+          <TouchableOpacity style={[st.headerBtn, (calendarOpen || filterDate) && st.headerBtnActive]} onPress={toggleCalendar}>
+            <Calendar size={22} color={(calendarOpen || filterDate) ? colors.primaryForeground : colors.foreground} />
           </TouchableOpacity>
           <TouchableOpacity style={st.headerBtn} onPress={() => router.push('/session-editor')}>
             <Plus size={22} color={colors.foreground} />
@@ -245,8 +248,17 @@ export default function SessionsScreen() {
         </View>
       </View>
 
-      {/* Active filter banner */}
-      {filterDate && (
+      {/* Inline Calendar */}
+      {calendarOpen && (
+        <InlineCalendar
+          onSelectDate={setFilterDate}
+          selectedDate={filterDate}
+          sessionDates={sessionDates}
+        />
+      )}
+
+      {/* Active filter banner (shown when calendar is collapsed but filter is active) */}
+      {filterDate && !calendarOpen && (
         <View style={st.filterBanner}>
           <Calendar size={14} color={colors.primary} />
           <Text style={st.filterText}>{formatDisplayDate(filterDate)}</Text>
@@ -277,15 +289,6 @@ export default function SessionsScreen() {
           </>
         )}
       </ScrollView>
-
-      {/* Calendar Modal */}
-      <CalendarModal
-        visible={calendarOpen}
-        onClose={() => setCalendarOpen(false)}
-        onSelectDate={setFilterDate}
-        selectedDate={filterDate}
-        sessionDates={sessionDates}
-      />
     </SafeAreaView>
   );
 }
@@ -321,9 +324,8 @@ const st = StyleSheet.create({
 });
 
 const cal = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
-  modal: { backgroundColor: colors.background, borderRadius: borderRadius.xl, borderWidth: 1, borderColor: colors.border, width: '88%', padding: spacing.md },
-  monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
+  container: { backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.md },
+  monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
   monthBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
   monthLabel: { fontSize: 16, fontWeight: '600', color: colors.foreground },
   weekRow: { flexDirection: 'row', marginBottom: spacing.xs },
@@ -336,6 +338,6 @@ const cal = StyleSheet.create({
   dayTextToday: { color: colors.primary, fontWeight: '700' },
   dayTextSelected: { color: colors.primaryForeground, fontWeight: '700' },
   dot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.primary },
-  clearBtn: { alignSelf: 'center', marginTop: spacing.md, paddingVertical: 8, paddingHorizontal: spacing.lg, borderRadius: borderRadius.md, borderWidth: 1, borderColor: colors.border },
+  clearBtn: { alignSelf: 'center', marginTop: spacing.sm, paddingVertical: 8, paddingHorizontal: spacing.lg, borderRadius: borderRadius.md, borderWidth: 1, borderColor: colors.border },
   clearText: { fontSize: 13, color: colors.mutedForeground },
 });

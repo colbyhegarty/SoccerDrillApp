@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,11 @@ import {
   Alert,
 } from 'react-native';
 import { Edit, Trash2, Clock, Users, Target } from 'lucide-react-native';
-import { CustomDrill } from '../types/customDrill';
+import { CustomDrill, DiagramData } from '../types/customDrill';
 import { getDifficultyColor, getCategoryColor } from '../lib/api';
 import { colors, borderRadius, spacing } from '../theme/colors';
-import { FIELD_COLORS } from '../types/customDrill';
+import { DrillDiagramView } from './DrillDiagramView';
+import { convertToDrillJson } from '../lib/drillConverter';
 
 interface CustomDrillCardProps {
   drill: CustomDrill;
@@ -30,6 +31,8 @@ export function CustomDrillCard({
   const { formData } = drill;
   const categoryColor = getCategoryColor(formData.category);
   const difficultyColor = getDifficultyColor(formData.difficulty);
+
+  const drillJson = useMemo(() => convertToDrillJson(drill.diagramData), [drill.diagramData]);
 
   const handleDelete = () => {
     Alert.alert(
@@ -51,6 +54,11 @@ export function CustomDrillCard({
       ? drill.diagramData.players.length
       : undefined;
 
+  const hasDiagramContent = drill.diagramData.players.length > 0 ||
+    drill.diagramData.cones.length > 0 ||
+    drill.diagramData.balls.length > 0 ||
+    drill.diagramData.goals.length > 0;
+
   return (
     <TouchableOpacity
       style={[styles.card, compact && styles.cardCompact]}
@@ -59,74 +67,61 @@ export function CustomDrillCard({
     >
       {/* Diagram Preview */}
       <View style={styles.diagramContainer}>
-        {/* Simple field background with player dot indicators */}
-        <View style={styles.fieldBg}>
-          {drill.diagramData.players.length > 0 ? (
-            <View style={styles.playerDotsContainer}>
-              {drill.diagramData.players.slice(0, 12).map((player, i) => {
-                const roleColors: Record<string, string> = {
-                  ATTACKER: '#e63946',
-                  DEFENDER: '#457b9d',
-                  GOALKEEPER: '#f1fa3c',
-                  NEUTRAL: '#f4a261',
-                };
-                return (
-                  <View
-                    key={i}
-                    style={[
-                      styles.playerDot,
-                      {
-                        backgroundColor: roleColors[player.role] || '#f4a261',
-                        left: `${Math.min(Math.max(player.position.x, 5), 95)}%`,
-                        top: `${Math.min(Math.max(player.position.y, 5), 95)}%`,
-                      },
-                    ]}
-                  />
-                );
-              })}
-            </View>
-          ) : (
+        {hasDiagramContent ? (
+          <View style={styles.diagramInner} pointerEvents="none">
+            <DrillDiagramView drillJson={drillJson} mode="static" targetAspectRatio={4 / 3} />
+          </View>
+        ) : (
+          <View style={styles.fieldBg}>
             <Text style={styles.noPlayers}>No diagram</Text>
-          )}
-        </View>
+          </View>
+        )}
       </View>
 
-      {/* Content */}
+      {/* Content - flex:1 pushes footer to bottom */}
       <View style={[styles.content, compact && styles.contentCompact]}>
-        <Text
-          style={[styles.title, compact && styles.titleCompact]}
-          numberOfLines={compact ? 2 : 1}
-        >
-          {formData.name || 'Untitled Drill'}
-        </Text>
+        {/* Top section: title, tags, description - can vary in height */}
+        <View>
+          <Text
+            style={[styles.title, compact && styles.titleCompact]}
+            numberOfLines={compact ? 2 : 1}
+          >
+            {formData.name || 'Untitled Drill'}
+          </Text>
 
-        {/* Tags */}
-        <View style={styles.tags}>
-          {formData.category ? (
-            <View style={[styles.tag, { backgroundColor: categoryColor.bg }]}>
-              <Text style={[styles.tagText, { color: categoryColor.text }]}>
-                {formData.category.toUpperCase()}
-              </Text>
+          {/* Tags */}
+          {(formData.category || formData.difficulty) ? (
+            <View style={styles.tags}>
+              {formData.category ? (
+                <View style={[styles.tag, { backgroundColor: categoryColor.bg }]}>
+                  <Text style={[styles.tagText, { color: categoryColor.text }]}>
+                    {formData.category.toUpperCase()}
+                  </Text>
+                </View>
+              ) : null}
+              {formData.difficulty ? (
+                <View style={[styles.tag, { backgroundColor: difficultyColor.bg }]}>
+                  <Text style={[styles.tagText, { color: difficultyColor.text }]}>
+                    {formData.difficulty.charAt(0) +
+                      formData.difficulty.slice(1).toLowerCase()}
+                  </Text>
+                </View>
+              ) : null}
             </View>
           ) : null}
-          {formData.difficulty ? (
-            <View style={[styles.tag, { backgroundColor: difficultyColor.bg }]}>
-              <Text style={[styles.tagText, { color: difficultyColor.text }]}>
-                {formData.difficulty.charAt(0) +
-                  formData.difficulty.slice(1).toLowerCase()}
-              </Text>
-            </View>
+
+          {/* Description (hidden in compact) */}
+          {!compact && formData.description ? (
+            <Text style={styles.description} numberOfLines={2}>
+              {formData.description}
+            </Text>
           ) : null}
         </View>
 
-        {/* Description (hidden in compact) */}
-        {!compact && formData.description ? (
-          <Text style={styles.description} numberOfLines={2}>
-            {formData.description}
-          </Text>
-        ) : null}
+        {/* Spacer pushes meta to bottom of content area */}
+        <View style={{ flex: 1 }} />
 
-        {/* Meta */}
+        {/* Meta - always at bottom of content area */}
         <View style={styles.meta}>
           {(formData.playerCount || playerCount) ? (
             <View style={styles.metaItem}>
@@ -192,35 +187,29 @@ const styles = StyleSheet.create({
   cardCompact: {
     marginHorizontal: spacing.xs,
     marginVertical: spacing.xs,
+    flex: 1,
   },
   diagramContainer: {
     aspectRatio: 4 / 3,
     position: 'relative',
+    overflow: 'hidden',
+    backgroundColor: '#63b043',
+  },
+  diagramInner: {
+    width: '100%',
   },
   fieldBg: {
     flex: 1,
-    backgroundColor: FIELD_COLORS.GRASS_DARK,
+    backgroundColor: '#63b043',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  playerDotsContainer: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  playerDot: {
-    position: 'absolute',
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
-    marginLeft: -5,
-    marginTop: -5,
   },
   noPlayers: {
     color: 'rgba(255,255,255,0.5)',
     fontSize: 14,
   },
   content: {
+    flex: 1,
     padding: spacing.md,
   },
   contentCompact: {

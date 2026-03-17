@@ -136,40 +136,46 @@ export function DrillCard({
 
       {/* Content */}
       <View style={[styles.content, compact && styles.contentCompact]}>
-        {/* Title */}
-        <Animated.Text style={[styles.title, compact && styles.titleCompact, titleAnimStyle]} numberOfLines={compact ? 2 : 1}>
-          {drill.name}
-        </Animated.Text>
+        {/* Top section: title, tags, description */}
+        <View>
+          {/* Title */}
+          <Animated.Text style={[styles.title, compact && styles.titleCompact, titleAnimStyle]} numberOfLines={compact ? 2 : 1}>
+            {drill.name}
+          </Animated.Text>
 
-        {/* Tags */}
-        <View style={styles.tags}>
-          {drill.category?.split(',').map((cat, index) => {
-            const catColor = getCategoryColor(cat.trim());
-            return (
-              <View key={index} style={[styles.tag, { backgroundColor: catColor.bg }]}>
-                <Text style={[styles.tagText, { color: catColor.text }]}>
-                  {cat.trim().toUpperCase()}
+          {/* Tags */}
+          <View style={styles.tags}>
+            {drill.category?.split(',').map((cat, index) => {
+              const catColor = getCategoryColor(cat.trim());
+              return (
+                <View key={index} style={[styles.tag, { backgroundColor: catColor.bg }]}>
+                  <Text style={[styles.tagText, { color: catColor.text }]}>
+                    {cat.trim().toUpperCase()}
+                  </Text>
+                </View>
+              );
+            })}
+            {drill.difficulty && (
+              <View style={[styles.tag, { backgroundColor: difficultyColor.bg }]}>
+                <Text style={[styles.tagText, { color: difficultyColor.text }]}>
+                  {drill.difficulty.toUpperCase()}
                 </Text>
               </View>
-            );
-          })}
-          {drill.difficulty && (
-            <View style={[styles.tag, { backgroundColor: difficultyColor.bg }]}>
-              <Text style={[styles.tagText, { color: difficultyColor.text }]}>
-                {drill.difficulty.toUpperCase()}
-              </Text>
-            </View>
+            )}
+          </View>
+
+          {/* Description (hidden in compact) */}
+          {!compact && drill.description && (
+            <Text style={styles.description} numberOfLines={2}>
+              {drill.description}
+            </Text>
           )}
         </View>
 
-        {/* Description (hidden in compact) */}
-        {!compact && drill.description && (
-          <Text style={styles.description} numberOfLines={2}>
-            {drill.description}
-          </Text>
-        )}
+        {/* Spacer pushes meta to bottom */}
+        <View style={{ flex: 1 }} />
 
-        {/* Meta Info */}
+        {/* Meta Info - pinned to bottom */}
         <View style={styles.meta}>
           {drill.player_count != null && (
             <View style={styles.metaItem}>
@@ -210,6 +216,7 @@ const styles = StyleSheet.create({
   cardCompact: {
     marginHorizontal: spacing.xs,
     marginVertical: spacing.xs,
+    flex: 1,
   },
   imageContainer: {
     aspectRatio: 4 / 3,
@@ -271,6 +278,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   content: {
+    flex: 1,
     padding: spacing.md,
   },
   contentCompact: {

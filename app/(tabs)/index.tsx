@@ -36,69 +36,6 @@ import { Drill } from '../../src/types/drill';
 
 const DRILLS_PER_PAGE = 20;
 
-// ── Memoized header to prevent FlatList remounting on data changes ──
-const ListHeader = React.memo(({
-  categories, ageGroups, durations, filters, onFilterChange,
-  resultCount, isLoading, gridCols, onGridColsChange,
-}: {
-  categories: string[];
-  ageGroups: string[];
-  durations: string[];
-  filters: DrillFilterParams;
-  onFilterChange: (f: DrillFilterParams) => void;
-  resultCount: number;
-  isLoading: boolean;
-  gridCols: 1 | 2;
-  onGridColsChange: (cols: 1 | 2) => void;
-}) => (
-  <View style={styles.header}>
-    {/* Title Row */}
-    <View style={styles.titleRow}>
-      <View style={styles.logoContainer}>
-        <Library size={20} color={colors.primaryForeground} />
-      </View>
-      <Text style={styles.title}>Drill Library</Text>
-    </View>
-
-    {/* Filters */}
-    <DrillFilters
-      categories={categories}
-      ageGroups={ageGroups}
-      durations={durations}
-      filters={filters}
-      onFilterChange={onFilterChange}
-      resultCount={resultCount}
-      isLoading={isLoading}
-    />
-
-    {/* View Toggle */}
-    <View style={styles.viewToggleRow}>
-      <View style={{ flex: 1 }} />
-      <View style={styles.viewToggle}>
-        <TouchableOpacity
-          style={[styles.toggleButton, gridCols === 1 && styles.toggleButtonActive]}
-          onPress={() => onGridColsChange(1)}
-        >
-          <LayoutList
-            size={14}
-            color={gridCols === 1 ? colors.primaryForeground : colors.mutedForeground}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.toggleButton, gridCols === 2 && styles.toggleButtonActive]}
-          onPress={() => onGridColsChange(2)}
-        >
-          <LayoutGrid
-            size={14}
-            color={gridCols === 2 ? colors.primaryForeground : colors.mutedForeground}
-          />
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-));
-ListHeader.displayName = 'ListHeader';
-
 export default function LibraryScreen() {
   // Filter options from Supabase
   const router = useRouter();
@@ -275,20 +212,6 @@ export default function LibraryScreen() {
     return savedState[drillId] ?? false;
   };
 
-  const renderHeader = useCallback(() => (
-    <ListHeader
-      categories={categories}
-      ageGroups={ageGroups}
-      durations={durations}
-      filters={filters}
-      onFilterChange={setFilters}
-      resultCount={drillsForDisplay.length}
-      isLoading={isLoading}
-      gridCols={gridCols}
-      onGridColsChange={setGridCols}
-    />
-  ), [categories, ageGroups, durations, filters, drillsForDisplay.length, isLoading, gridCols]);
-
   // Inline empty/loading/error content shown inside the FlatList
   const renderEmpty = useCallback(() => {
     if (isLoading) {
@@ -381,12 +304,47 @@ export default function LibraryScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
 
+      {/* Header lives outside FlatList so TextInput focus is never lost */}
+      <View style={styles.header}>
+        <View style={styles.titleRow}>
+          <View style={styles.logoContainer}>
+            <Library size={20} color={colors.primaryForeground} />
+          </View>
+          <Text style={styles.title}>Drill Library</Text>
+        </View>
+        <DrillFilters
+          categories={categories}
+          ageGroups={ageGroups}
+          durations={durations}
+          filters={filters}
+          onFilterChange={setFilters}
+          resultCount={drillsForDisplay.length}
+          isLoading={isLoading}
+        />
+        <View style={styles.viewToggleRow}>
+          <View style={{ flex: 1 }} />
+          <View style={styles.viewToggle}>
+            <TouchableOpacity
+              style={[styles.toggleButton, gridCols === 1 && styles.toggleButtonActive]}
+              onPress={() => setGridCols(1)}
+            >
+              <LayoutList size={14} color={gridCols === 1 ? colors.primaryForeground : colors.mutedForeground} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toggleButton, gridCols === 2 && styles.toggleButtonActive]}
+              onPress={() => setGridCols(2)}
+            >
+              <LayoutGrid size={14} color={gridCols === 2 ? colors.primaryForeground : colors.mutedForeground} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
       <FlatList
         data={paginatedDrills}
         keyExtractor={(item) => item.id}
         numColumns={gridCols}
         key={`grid-${gridCols}`}
-        ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
         renderItem={({ item }) => (
@@ -403,6 +361,7 @@ export default function LibraryScreen() {
         )}
         contentContainerStyle={styles.listContent}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="none"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

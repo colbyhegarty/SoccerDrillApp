@@ -59,6 +59,8 @@ function PickerModal({ visible, mode, value, onConfirm, onCancel }: {
     if (visible) setTempValue(value);
   }, [visible, value]);
 
+  if (!visible) return null;
+
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onCancel}>
       <View style={pk.backdrop}>
@@ -73,14 +75,16 @@ function PickerModal({ visible, mode, value, onConfirm, onCancel }: {
               <Text style={pk.doneText}>Done</Text>
             </TouchableOpacity>
           </View>
-          <DateTimePicker
-            value={tempValue}
-            mode={mode}
-            display="spinner"
-            themeVariant="dark"
-            onChange={(_, date) => { if (date) setTempValue(date); }}
-            style={{ width: '100%' }}
-          />
+          <View style={pk.pickerContainer}>
+            <DateTimePicker
+              value={tempValue}
+              mode={mode}
+              display="spinner"
+              themeVariant="dark"
+              onChange={(_, date) => { if (date) setTempValue(date); }}
+              style={pk.picker}
+            />
+          </View>
         </View>
       </View>
     </Modal>
@@ -94,6 +98,8 @@ const pk = StyleSheet.create({
   title: { fontSize: 16, fontWeight: '600', color: colors.foreground },
   cancelText: { fontSize: 15, color: colors.mutedForeground },
   doneText: { fontSize: 15, fontWeight: '600', color: colors.primary },
+  pickerContainer: { alignItems: 'center', overflow: 'hidden', paddingHorizontal: spacing.md },
+  picker: { width: '100%' },
 });
 
 // ── Add Activity Modal ──────────────────────────────────────────────
@@ -505,7 +511,7 @@ export default function SessionEditorScreen() {
             <View style={s.row}>
               <View style={[s.fieldGroup, { flex: 1 }]}>
                 <Text style={s.label}>Date</Text>
-                <TouchableOpacity style={s.input} onPress={() => setShowDatePicker(true)}>
+                <TouchableOpacity style={s.input} onPress={() => { setShowTimePicker(false); setShowDatePicker(true); }}>
                   <Text style={{ color: session.session_date ? colors.foreground : colors.mutedForeground, fontSize: 14 }}>
                     {session.session_date || 'Select date'}
                   </Text>
@@ -513,7 +519,7 @@ export default function SessionEditorScreen() {
               </View>
               <View style={[s.fieldGroup, { flex: 1 }]}>
                 <Text style={s.label}>Time</Text>
-                <TouchableOpacity style={s.input} onPress={() => setShowTimePicker(true)}>
+                <TouchableOpacity style={s.input} onPress={() => { setShowDatePicker(false); setShowTimePicker(true); }}>
                   <Text style={{ color: session.session_time ? colors.foreground : colors.mutedForeground, fontSize: 14 }}>
                     {session.session_time || 'Select time'}
                   </Text>

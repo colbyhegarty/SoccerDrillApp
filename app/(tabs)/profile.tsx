@@ -32,9 +32,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ContactsManager } from '../../src/components/ContactsManager';
 import { CustomDrillCard } from '../../src/components/CustomDrillCard';
-import { CustomDrillDetailModal } from '../../src/components/CustomDrillDetailModal';
 import { DrillCard } from '../../src/components/DrillCard';
 import { DrillDetailModal } from '../../src/components/DrillDetailModal';
+import { customDrillToDrill } from '../../src/lib/drillConverter';
 import { clearContacts, Contact, getContacts } from '../../src/lib/contactsStorage';
 import { clearCustomDrills, deleteCustomDrill, getCustomDrills } from '../../src/lib/customDrillStorage';
 import { deleteSession, duplicateSession, getSessions } from '../../src/lib/sessionStorage';
@@ -45,6 +45,11 @@ import { Drill, UserProfile } from '../../src/types/drill';
 import { Session } from '../../src/types/session';
 
 type ProfileTab = 'custom' | 'saved' | 'sessions';
+
+// Helper to render a session's first diagram thumbnail
+function SessionDiagramImage({ uri }: { uri: string }) {
+  return <Image source={{ uri }} style={{ width: '100%', height: '100%' }} contentFit="contain" />;
+}
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -57,7 +62,6 @@ export default function ProfileScreen() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedDrill, setSelectedDrill] = useState<Drill | null>(null);
-  const [selectedCustomDrill, setSelectedCustomDrill] = useState<CustomDrill | null>(null);
   const [activeTab, setActiveTab] = useState<ProfileTab>('custom');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -170,7 +174,7 @@ export default function ProfileScreen() {
         <View style={gridCols === 2 ? ps.grid2 : undefined}>
           {customDrills.map((drill) => (
             <View key={drill.id} style={gridCols === 2 ? ps.gridItem : undefined}>
-              <CustomDrillCard drill={drill} onView={setSelectedCustomDrill} onDelete={handleDeleteCustomDrill} compact={gridCols === 2} />
+              <CustomDrillCard drill={drill} onView={(d) => setSelectedDrill(customDrillToDrill(d))} onDelete={handleDeleteCustomDrill} compact={gridCols === 2} />
             </View>
           ))}
         </View>
@@ -206,43 +210,88 @@ export default function ProfileScreen() {
       return renderEmptyState(<CalendarDays size={28} color={colors.mutedForeground} />, 'No sessions yet', 'Create a training session to see it here');
     return (
       <View>
-        <View style={ps.tabSubHeader}><Text style={ps.tabCount}>{sessions.length} sessions</Text></View>
-        {sessions.map((session) => {
-          const totalDur = session.activities.reduce((s, a) => s + a.duration_minutes, 0);
-          const actCount = session.activities.length;
-          return (
-            <TouchableOpacity
-              key={session.id}
-              style={ps.sessionCard}
-              onPress={() => router.push({ pathname: '/session-view', params: { id: session.id } })}
-              activeOpacity={0.7}
-            >
-              <View style={ps.sessionCardHeader}>
-                <Text style={ps.sessionTitle} numberOfLines={1}>{session.title || 'Untitled Session'}</Text>
-                <View style={ps.sessionActions}>
-                  <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} onPress={() => router.push({ pathname: '/session-editor', params: { id: session.id } })}>
-                    <Edit size={14} color={colors.mutedForeground} />
-                  </TouchableOpacity>
-                  <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} onPress={() => handleDuplicateSession(session.id)}>
-                    <Copy size={14} color={colors.mutedForeground} />
-                  </TouchableOpacity>
-                  <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} onPress={() => handleDeleteSession(session.id, session.title)}>
-                    <Trash2 size={14} color={colors.destructive} />
+        <View style={ps.tabSubHeader}><Text style={ps.tabCount}>{sessions.length} sessions</Text>{renderColumnToggle()}</View>
+        <View style={gridCols === 2 ? ps.grid2 : undefined}>
+          {sessions.map((session) => {
+            const totalDur = session.activities.reduce((s, a) => s + a.duration_minutes, 0);
+            const actCount = session.activities.length;
+            const firstDiagramUrl = session.activities.find(a => a.drill_svg_url)?.drill_svg_url;
+
+            if (gridCols === 2) {
+              // Compact card view (grid)
+              return (
+                <View key={session.id} style={ps.gridItem}>
+                  <TouchableOpacity
+                    style={ps.sessionGridCard}
+                    onPress={() => router.push({ pathname: '/session-view', params: { id: session.id } })}
+                    activeOpacity={0.7}
+                  >
+                    {/* Diagram preview or placeholder */}
+                    <View style={ps.sessionGridDiagram}>
+                      {firstDiagramUrl ? (
+                        <SessionDiagramImage uri={firstDiagramUrl} />
+                      ) : (
+                        <View style={ps.sessionGridPlaceholder}>
+                          <CalendarDays size={20} color="rgba(255,255,255,0.4)" />
+                        </View>
+                      )}
+                      <View style={ps.sessionGridBadge}>
+                        <Text style={ps.sessionGridBadgeText}>{actCount} {actCount === 1 ? 'act' : 'acts'}</Text>
+                      </View>
+                    </View>
+                    <View style={ps.sessionGridContent}>
+                      <Text style={ps.sessionGridTitle} numberOfLines={2}>{session.title || 'Untitled Session'}</Text>
+                      <View style={ps.sessionGridMeta}>
+                        <Clock size={10} color={colors.mutedForeground} />
+                        <Text style={ps.sessionGridMetaText}>{totalDur} min</Text>
+                      </View>
+                      {session.session_date ? (
+                        <View style={ps.sessionGridMeta}>
+                          <Calendar size={10} color={colors.mutedForeground} />
+                          <Text style={ps.sessionGridMetaText}>{formatDate(session.session_date)}</Text>
+                        </View>
+                      ) : null}
+                    </View>
                   </TouchableOpacity>
                 </View>
-              </View>
-              <View style={ps.sessionMeta}>
-                {session.session_date ? (
-                  <View style={ps.sessionMetaRow}><Calendar size={13} color={colors.mutedForeground} /><Text style={ps.sessionMetaText}>{formatDate(session.session_date)}{session.session_time ? ` at ${session.session_time}` : ''}</Text></View>
-                ) : null}
-                {session.team_name ? (
-                  <View style={ps.sessionMetaRow}><Users size={13} color={colors.mutedForeground} /><Text style={ps.sessionMetaText}>{session.team_name}</Text></View>
-                ) : null}
-                <View style={ps.sessionMetaRow}><Clock size={13} color={colors.mutedForeground} /><Text style={ps.sessionMetaText}>{actCount} {actCount === 1 ? 'activity' : 'activities'} · {totalDur} min</Text></View>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+              );
+            }
+
+            // List view (single column)
+            return (
+              <TouchableOpacity
+                key={session.id}
+                style={ps.sessionCard}
+                onPress={() => router.push({ pathname: '/session-view', params: { id: session.id } })}
+                activeOpacity={0.7}
+              >
+                <View style={ps.sessionCardHeader}>
+                  <Text style={ps.sessionTitle} numberOfLines={1}>{session.title || 'Untitled Session'}</Text>
+                  <View style={ps.sessionActions}>
+                    <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} onPress={() => router.push({ pathname: '/session-editor', params: { id: session.id } })}>
+                      <Edit size={14} color={colors.mutedForeground} />
+                    </TouchableOpacity>
+                    <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} onPress={() => handleDuplicateSession(session.id)}>
+                      <Copy size={14} color={colors.mutedForeground} />
+                    </TouchableOpacity>
+                    <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} onPress={() => handleDeleteSession(session.id, session.title)}>
+                      <Trash2 size={14} color={colors.destructive} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={ps.sessionMeta}>
+                  {session.session_date ? (
+                    <View style={ps.sessionMetaRow}><Calendar size={13} color={colors.mutedForeground} /><Text style={ps.sessionMetaText}>{formatDate(session.session_date)}{session.session_time ? ` at ${session.session_time}` : ''}</Text></View>
+                  ) : null}
+                  {session.team_name ? (
+                    <View style={ps.sessionMetaRow}><Users size={13} color={colors.mutedForeground} /><Text style={ps.sessionMetaText}>{session.team_name}</Text></View>
+                  ) : null}
+                  <View style={ps.sessionMetaRow}><Clock size={13} color={colors.mutedForeground} /><Text style={ps.sessionMetaText}>{actCount} {actCount === 1 ? 'activity' : 'activities'} · {totalDur} min</Text></View>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
     );
   };
@@ -348,8 +397,13 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
-      <DrillDetailModal drill={selectedDrill} isOpen={selectedDrill !== null} onClose={() => setSelectedDrill(null)} isSaved={true} onSave={handleRemoveDrill} />
-      <CustomDrillDetailModal drill={selectedCustomDrill} isOpen={selectedCustomDrill !== null} onClose={() => setSelectedCustomDrill(null)} />
+      <DrillDetailModal
+        drill={selectedDrill}
+        isOpen={selectedDrill !== null}
+        onClose={() => setSelectedDrill(null)}
+        isSaved={selectedDrill?.source !== 'custom' && savedDrills.some(d => d.id === selectedDrill?.id)}
+        onSave={selectedDrill?.source !== 'custom' ? handleRemoveDrill : undefined}
+      />
     </SafeAreaView>
   );
 }
@@ -388,7 +442,7 @@ const ps = StyleSheet.create({
   viewToggle: { flexDirection: 'row', gap: 4 },
   toggleBtn: { width: 28, height: 28, borderRadius: borderRadius.sm, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, justifyContent: 'center', alignItems: 'center' },
   toggleBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  grid2: { flexDirection: 'row', flexWrap: 'wrap' },
+  grid2: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'stretch' },
   gridItem: { width: '50%' },
   emptyState: { alignItems: 'center', paddingVertical: spacing.xl * 2, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border, borderRadius: borderRadius.lg },
   emptyIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.card, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.md },
@@ -402,6 +456,16 @@ const ps = StyleSheet.create({
   sessionMeta: { gap: 4 },
   sessionMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   sessionMetaText: { fontSize: 12, color: colors.mutedForeground },
+  // Session grid cards (compact)
+  sessionGridCard: { flex: 1, backgroundColor: colors.card, borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.border, marginHorizontal: spacing.xs, marginVertical: spacing.xs, overflow: 'hidden' },
+  sessionGridDiagram: { aspectRatio: 4 / 3, backgroundColor: colors.fieldDark, position: 'relative' },
+  sessionGridPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  sessionGridBadge: { position: 'absolute', top: spacing.xs, right: spacing.xs, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: borderRadius.full },
+  sessionGridBadgeText: { fontSize: 9, fontWeight: '600', color: '#fff' },
+  sessionGridContent: { padding: spacing.sm, gap: 3 },
+  sessionGridTitle: { fontSize: 13, fontWeight: '600', color: colors.foreground, marginBottom: 2 },
+  sessionGridMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  sessionGridMetaText: { fontSize: 10, color: colors.mutedForeground },
   // Settings modal
   settingsBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
   settingsSheet: { backgroundColor: colors.background, borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl, paddingBottom: 40 },

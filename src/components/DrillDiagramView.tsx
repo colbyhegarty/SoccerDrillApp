@@ -58,11 +58,44 @@ interface DrillDiagramViewProps {
   drillJson: DrillJsonData;
   animationJson?: { duration: number; keyframes: AnimationKeyframe[] };
   mode: 'static' | 'animated';
+  targetAspectRatio?: number; // e.g. 4/3 — expands field bounds to match this ratio for card previews
 }
 
-export function DrillDiagramView({ drillJson, animationJson, mode }: DrillDiagramViewProps) {
+export function DrillDiagramView({ drillJson, animationJson, mode, targetAspectRatio }: DrillDiagramViewProps) {
   const [svgW, setSvgW] = useState(300);
-  const bounds = useMemo(() => calculateBounds(drillJson), [drillJson]);
+  const bounds = useMemo(() => {
+    const b = calculateBounds(drillJson);
+    if (!targetAspectRatio) return b;
+    // Expand bounds to match target aspect ratio by adding field padding
+    let bw = b.xMax - b.xMin;
+    let bh = b.yMax - b.yMin;
+    const currentRatio = bw / bh;
+    if (currentRatio < targetAspectRatio) {
+      // Too tall — expand width
+      const newW = bh * targetAspectRatio;
+      const cx = (b.xMin + b.xMax) / 2;
+      b.xMin = Math.max(0, cx - newW / 2);
+      b.xMax = Math.min(100, cx + newW / 2);
+      // If clamped, shift the other side
+      const actualW = b.xMax - b.xMin;
+      if (actualW < newW) {
+        if (b.xMin === 0) b.xMax = Math.min(100, newW);
+        else b.xMin = Math.max(0, b.xMax - newW);
+      }
+    } else if (currentRatio > targetAspectRatio) {
+      // Too wide — expand height
+      const newH = bw / targetAspectRatio;
+      const cy = (b.yMin + b.yMax) / 2;
+      b.yMin = Math.max(0, cy - newH / 2);
+      b.yMax = Math.min(100, cy + newH / 2);
+      const actualH = b.yMax - b.yMin;
+      if (actualH < newH) {
+        if (b.yMin === 0) b.yMax = Math.min(100, newH);
+        else b.yMin = Math.max(0, b.yMax - newH);
+      }
+    }
+    return b;
+  }, [drillJson, targetAspectRatio]);
   const bw = bounds.xMax - bounds.xMin;
   const bh = bounds.yMax - bounds.yMin;
   const aspectRatio = bw / bh;

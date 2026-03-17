@@ -6,33 +6,37 @@ import {
   Clock,
   Edit, Eye,
   ListChecks,
+  Mail,
   Play,
+  Share2,
   StickyNote,
   Target,
   Users,
   X
 } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions, Modal,
-  PanResponder,
-  Animated as RNAnimated,
+  Alert,
+  Dimensions, FlatList, Modal,
   ScrollView, StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  ViewToken,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DrillDetailModal } from '../src/components/DrillDetailModal';
+import { ShareSessionModal } from '../src/components/ShareSessionModal';
 import { fetchDrillById } from '../src/lib/api';
+import { exportAndSharePDF } from '../src/lib/sessionPdf';
 import { getSession } from '../src/lib/sessionStorage';
 import { borderRadius, colors, spacing } from '../src/theme/colors';
 import { Drill } from '../src/types/drill';
 import { Session, SessionActivity } from '../src/types/session';
 
-const { width: SW, height: SH } = Dimensions.get('window');
+const { width: SW } = Dimensions.get('window');
 
 function formatTime(minutes: number) {
   const h = Math.floor(minutes / 60);
@@ -44,51 +48,96 @@ function formatBullets(text: string): string[] {
   return text.split(/\n|(?:\d+\.\s)/).map(l => l.replace(/^[-•]\s*/, '').trim()).filter(Boolean);
 }
 
+// ── Activity Page (single activity rendered at full screen width) ────
+function ActivityPage({ activity, startMin, drillData, onViewDrill, loadingDrillId, pageWidth }: {
+  activity: SessionActivity; startMin: number; drillData: Drill | null;
+  onViewDrill: (a: SessionActivity) => void; loadingDrillId: string | null; pageWidth: number;
+}) {
+  const title = activity.title || activity.drill_name || 'Activity';
+  return (
+    <View style={{ width: pageWidth }}>
+      <ScrollView contentContainerStyle={sm.slideContent} showsVerticalScrollIndicator={false}>
+        <View style={sm.timeBadge}><Text style={sm.timeBadgeText}>{formatTime(startMin)} – {formatTime(startMin + activity.duration_minutes)}</Text></View>
+        <Text style={sm.actTitle}>{title}</Text>
+        <View style={sm.metaRow}>
+          <Clock size={16} color={colors.mutedForeground} /><Text style={sm.metaText}>{activity.duration_minutes} min</Text>
+          {(activity.drill_player_count || drillData?.player_count) && (<><Users size={16} color={colors.mutedForeground} /><Text style={sm.metaText}>{activity.drill_player_count || drillData?.player_count}</Text></>)}
+        </View>
+        {activity.description && !drillData && <Text style={sm.descText}>{activity.description}</Text>}
+        {activity.drill_svg_url && (
+          <View style={sm.diagramWrap}><Image source={{ uri: activity.drill_svg_url }} style={sm.diagram} contentFit="cover" /></View>
+        )}
+        {activity.library_drill_id && (
+          <TouchableOpacity style={sm.viewDrillBtn} onPress={() => onViewDrill(activity)} disabled={loadingDrillId === activity.id}>
+            <Eye size={16} color={colors.primary} /><Text style={sm.viewDrillText}>{loadingDrillId === activity.id ? 'Loading...' : 'View Full Drill Details'}</Text>
+          </TouchableOpacity>
+        )}
+        {(drillData?.setup || activity.drill_setup) && (
+          <View style={sm.sectionCard}>
+            <View style={sm.sectionHead}><ListChecks size={14} color={colors.primary} /><Text style={sm.sectionLabel}>SETUP</Text></View>
+            {formatBullets(drillData?.setup || activity.drill_setup || '').map((p, i) => (
+              <View key={i} style={sm.bullet}><Text style={sm.bulletDot}>▸</Text><Text style={sm.bulletText}>{p}</Text></View>
+            ))}
+          </View>
+        )}
+        {(drillData?.instructions || activity.drill_instructions) && (
+          <View style={sm.sectionCard}>
+            <View style={sm.sectionHead}><ListChecks size={14} color={colors.primary} /><Text style={sm.sectionLabel}>INSTRUCTIONS</Text></View>
+            {formatBullets(drillData?.instructions || activity.drill_instructions || '').map((p, i) => (
+              <View key={i} style={sm.bullet}><Text style={sm.bulletDot}>▸</Text><Text style={sm.bulletText}>{p}</Text></View>
+            ))}
+          </View>
+        )}
+        {activity.activity_notes && (
+          <View style={sm.notesCard}><StickyNote size={14} color={colors.primary} /><View style={{ flex: 1 }}><Text style={sm.notesLabel}>COACH NOTES</Text><Text style={sm.notesText}>{activity.activity_notes}</Text></View></View>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
 // ── Session Mode ────────────────────────────────────────────────────
 function SessionMode({ session, drillDetails, onExit, onViewDrill, loadingDrillId }: {
   session: Session; drillDetails: Record<string, Drill>;
   onExit: () => void; onViewDrill: (a: SessionActivity) => void; loadingDrillId: string | null;
 }) {
   const [idx, setIdx] = useState(0);
-  const pan = useRef(new RNAnimated.Value(0)).current;
+  const [pageWidth, setPageWidth] = useState(SW);
+  const flatListRef = useRef<FlatList>(null);
   const activities = session.activities;
-  const activity = activities[idx];
-  const isFirst = idx === 0;
-  const isLast = idx === activities.length - 1;
   const progress = ((idx + 1) / activities.length) * 100;
 
-  const panResponder = useRef(PanResponder.create({
-    onMoveShouldSetPanResponderCapture: (_, g) => Math.abs(g.dx) > 15 && Math.abs(g.dx) > Math.abs(g.dy * 1.5),
-    onPanResponderMove: (_, g) => {
-      let dx = g.dx;
-      if ((dx > 0 && isFirst) || (dx < 0 && isLast)) dx *= 0.2;
-      pan.setValue(dx);
-    },
-    onPanResponderRelease: (_, g) => {
-      if (g.dx < -60 && !isLast) {
-        RNAnimated.timing(pan, { toValue: -SW, duration: 250, useNativeDriver: true }).start(() => {
-          setIdx(i => i + 1); pan.setValue(SW);
-          RNAnimated.timing(pan, { toValue: 0, duration: 250, useNativeDriver: true }).start();
-        });
-      } else if (g.dx > 60 && !isFirst) {
-        RNAnimated.timing(pan, { toValue: SW, duration: 250, useNativeDriver: true }).start(() => {
-          setIdx(i => i - 1); pan.setValue(-SW);
-          RNAnimated.timing(pan, { toValue: 0, duration: 250, useNativeDriver: true }).start();
-        });
-      } else {
-        RNAnimated.spring(pan, { toValue: 0, useNativeDriver: true }).start();
-      }
-    },
-  })).current;
+  // Compute start times
+  const startTimes: number[] = [];
+  let acc = 0;
+  for (const a of activities) { startTimes.push(acc); acc += a.duration_minutes; }
 
-  let startMin = 0;
-  for (let i = 0; i < idx; i++) startMin += activities[i].duration_minutes;
-  const title = activity.title || activity.drill_name || 'Activity';
-  const drillData = activity.library_drill_id ? drillDetails[activity.library_drill_id] : null;
+  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    if (viewableItems.length > 0 && viewableItems[0].index != null) {
+      setIdx(viewableItems[0].index);
+    }
+  }).current;
+
+  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
+
+  const renderPage = useCallback(({ item, index }: { item: SessionActivity; index: number }) => (
+    <ActivityPage
+      activity={item}
+      startMin={startTimes[index]}
+      drillData={item.library_drill_id ? drillDetails[item.library_drill_id] || null : null}
+      onViewDrill={onViewDrill}
+      loadingDrillId={loadingDrillId}
+      pageWidth={pageWidth}
+    />
+  ), [drillDetails, loadingDrillId, onViewDrill, startTimes, pageWidth]);
+
+  const isLast = idx === activities.length - 1;
 
   return (
     <Modal visible animationType="slide" statusBarTranslucent>
-      <SafeAreaView style={sm.container} edges={['top', 'bottom']}>
+      <SafeAreaView style={sm.container} edges={['top', 'bottom']}
+        onLayout={(e) => setPageWidth(e.nativeEvent.layout.width)}
+      >
         <StatusBar barStyle="light-content" />
         {/* Header */}
         <View style={sm.header}>
@@ -100,50 +149,22 @@ function SessionMode({ session, drillDetails, onExit, onViewDrill, loadingDrillI
         </View>
         <View style={sm.progressBg}><View style={[sm.progressFill, { width: `${progress}%` }]} /></View>
 
-        {/* Swipeable content */}
-        <RNAnimated.View style={[sm.slideWrap, { transform: [{ translateX: pan }] }]} {...panResponder.panHandlers}>
-          <ScrollView contentContainerStyle={sm.slideContent} showsVerticalScrollIndicator={false}>
-            <View style={sm.timeBadge}><Text style={sm.timeBadgeText}>{formatTime(startMin)} – {formatTime(startMin + activity.duration_minutes)}</Text></View>
-            <Text style={sm.actTitle}>{title}</Text>
-            <View style={sm.metaRow}>
-              <Clock size={16} color={colors.mutedForeground} /><Text style={sm.metaText}>{activity.duration_minutes} min</Text>
-              {(activity.drill_player_count || drillData?.player_count) && (<><Users size={16} color={colors.mutedForeground} /><Text style={sm.metaText}>{activity.drill_player_count || drillData?.player_count}</Text></>)}
-            </View>
-            {activity.description && !drillData && <Text style={sm.descText}>{activity.description}</Text>}
-            {activity.drill_svg_url && (
-              <View style={sm.diagramWrap}><Image source={{ uri: activity.drill_svg_url }} style={sm.diagram} contentFit="contain" /></View>
-            )}
-            {activity.library_drill_id && (
-              <TouchableOpacity style={sm.viewDrillBtn} onPress={() => onViewDrill(activity)} disabled={loadingDrillId === activity.id}>
-                <Eye size={16} color={colors.primary} /><Text style={sm.viewDrillText}>{loadingDrillId === activity.id ? 'Loading...' : 'View Full Drill Details'}</Text>
-              </TouchableOpacity>
-            )}
-            {(drillData?.setup || activity.drill_setup) && (
-              <View style={sm.sectionCard}>
-                <View style={sm.sectionHead}><ListChecks size={14} color={colors.primary} /><Text style={sm.sectionLabel}>SETUP</Text></View>
-                {formatBullets(drillData?.setup || activity.drill_setup || '').map((p, i) => (
-                  <View key={i} style={sm.bullet}><Text style={sm.bulletDot}>▸</Text><Text style={sm.bulletText}>{p}</Text></View>
-                ))}
-              </View>
-            )}
-            {(drillData?.instructions || activity.drill_instructions) && (
-              <View style={sm.sectionCard}>
-                <View style={sm.sectionHead}><ListChecks size={14} color={colors.primary} /><Text style={sm.sectionLabel}>INSTRUCTIONS</Text></View>
-                {formatBullets(drillData?.instructions || activity.drill_instructions || '').map((p, i) => (
-                  <View key={i} style={sm.bullet}><Text style={sm.bulletDot}>▸</Text><Text style={sm.bulletText}>{p}</Text></View>
-                ))}
-              </View>
-            )}
-            {activity.activity_notes && (
-              <View style={sm.notesCard}><StickyNote size={14} color={colors.primary} /><View style={{ flex: 1 }}><Text style={sm.notesLabel}>COACH NOTES</Text><Text style={sm.notesText}>{activity.activity_notes}</Text></View></View>
-            )}
-            {activities.length > 1 && (
-              <Text style={sm.hint}>
-                {isFirst ? 'Swipe left for next →' : isLast ? '← Swipe right for previous' : '← Swipe left or right →'}
-              </Text>
-            )}
-          </ScrollView>
-        </RNAnimated.View>
+        {/* Horizontal paging FlatList — swipe left/right navigates, vertical scroll works per-page */}
+        <FlatList
+          ref={flatListRef}
+          data={activities}
+          keyExtractor={(item) => item.id}
+          renderItem={renderPage}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
+          getItemLayout={(_, index) => ({ length: pageWidth, offset: pageWidth * index, index })}
+          initialNumToRender={1}
+          maxToRenderPerBatch={2}
+          windowSize={3}
+        />
 
         {/* Footer */}
         <View style={sm.footer}>
@@ -166,6 +187,22 @@ export default function SessionViewScreen() {
   const [selectedDrill, setSelectedDrill] = useState<Drill | null>(null);
   const [loadingDrillId, setLoadingDrillId] = useState<string | null>(null);
   const [sessionMode, setSessionMode] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportPDF = async () => {
+    if (!session) return;
+    setExporting(true);
+    try {
+      await exportAndSharePDF(session, drillDetails);
+    } catch (err: any) {
+      if (!err?.message?.includes('cancelled') && !err?.message?.includes('canceled')) {
+        Alert.alert('Error', 'Failed to export PDF.');
+      }
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     if (params.id) {
@@ -219,7 +256,10 @@ export default function SessionViewScreen() {
               <Text style={v.startBtnText}>Start</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity onPress={() => router.push({ pathname: '/session-editor', params: { id: session.id } })}>
+          <TouchableOpacity onPress={handleExportPDF} disabled={exporting} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Share2 size={18} color={colors.mutedForeground} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push({ pathname: '/session-editor', params: { id: session.id } })} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Edit size={18} color={colors.mutedForeground} />
           </TouchableOpacity>
         </View>
@@ -276,12 +316,10 @@ export default function SessionViewScreen() {
 
               return (
                 <View key={activity.id} style={v.activityRow}>
-                  {/* Time node */}
                   <View style={v.timelineCol}>
                     <View style={v.timeNode}><Text style={v.timeNodeText}>{formatTime(startMin).replace(' min', 'm')}</Text></View>
                     {index < session.activities.length - 1 && <View style={v.timelineLine} />}
                   </View>
-                  {/* Card */}
                   <View style={v.activityCard}>
                     <View style={v.actCardHeader}>
                       <Text style={v.actCardTitle} numberOfLines={1}>{title}</Text>
@@ -289,7 +327,7 @@ export default function SessionViewScreen() {
                     </View>
                     {activity.description && !drillData && <Text style={v.actDesc}>{activity.description}</Text>}
                     {activity.drill_svg_url && (
-                      <View style={v.actDiagram}><Image source={{ uri: activity.drill_svg_url }} style={{ width: '100%', height: '100%' }} contentFit="contain" /></View>
+                      <View style={v.actDiagram}><Image source={{ uri: activity.drill_svg_url }} style={{ width: '100%', height: '100%' }} contentFit="cover" /></View>
                     )}
                     {activity.activity_notes && (
                       <View style={v.actNotes}><StickyNote size={12} color={colors.primary} /><Text style={v.actNotesText}>{activity.activity_notes}</Text></View>
@@ -315,15 +353,26 @@ export default function SessionViewScreen() {
             </View>
           </View>
         )}
+
+        {/* Share actions */}
+        <View style={v.shareRow}>
+          <TouchableOpacity style={v.shareBtn} onPress={handleExportPDF} disabled={exporting}>
+            <Share2 size={16} color={colors.primaryForeground} />
+            <Text style={v.shareBtnText}>{exporting ? 'Exporting...' : 'Export PDF'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={v.shareContactsBtn} onPress={() => setShareModalOpen(true)}>
+            <Mail size={16} color={colors.primary} />
+            <Text style={v.shareContactsText}>Share to Contacts</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
-      {/* Session Mode */}
       {sessionMode && (
         <SessionMode session={session} drillDetails={drillDetails} onExit={() => setSessionMode(false)} onViewDrill={handleViewDrill} loadingDrillId={loadingDrillId} />
       )}
 
-      {/* Drill Modal */}
       <DrillDetailModal drill={selectedDrill} isOpen={selectedDrill !== null} onClose={() => setSelectedDrill(null)} isSaved={false} onSave={() => {}} />
+      <ShareSessionModal session={session} drillDetails={drillDetails} isOpen={shareModalOpen} onClose={() => setShareModalOpen(false)} />
     </SafeAreaView>
   );
 }
@@ -374,6 +423,11 @@ const v = StyleSheet.create({
   equipList: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   equipChip: { backgroundColor: colors.background, paddingHorizontal: 14, paddingVertical: 8, borderRadius: borderRadius.full, borderWidth: 1, borderColor: colors.border },
   equipText: { fontSize: 13, color: colors.foreground },
+  shareRow: { flexDirection: 'row', gap: spacing.sm },
+  shareBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.primary, borderRadius: borderRadius.lg, paddingVertical: 14 },
+  shareBtnText: { fontSize: 14, fontWeight: '600', color: colors.primaryForeground },
+  shareContactsBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.lg, paddingVertical: 14 },
+  shareContactsText: { fontSize: 14, fontWeight: '500', color: colors.primary },
 });
 
 const sm = StyleSheet.create({
@@ -383,8 +437,7 @@ const sm = StyleSheet.create({
   activityCount: { fontSize: 14, fontWeight: '700', color: colors.foreground, marginTop: 2 },
   progressBg: { height: 4, backgroundColor: colors.border, marginHorizontal: spacing.md, borderRadius: 2 },
   progressFill: { height: 4, backgroundColor: colors.primary, borderRadius: 2 },
-  slideWrap: { flex: 1 },
-  slideContent: { padding: spacing.md, paddingBottom: 40, gap: spacing.md },
+  slideContent: { padding: spacing.md, paddingBottom: 20, gap: spacing.md },
   timeBadge: { backgroundColor: colors.primaryLight, paddingHorizontal: 12, paddingVertical: 6, borderRadius: borderRadius.full, alignSelf: 'flex-start' },
   timeBadgeText: { fontSize: 12, fontWeight: '600', color: colors.primary },
   actTitle: { fontSize: 24, fontWeight: '700', color: colors.foreground },
@@ -404,10 +457,7 @@ const sm = StyleSheet.create({
   notesCard: { flexDirection: 'row', gap: spacing.sm, backgroundColor: 'rgba(139,145,158,0.08)', borderRadius: borderRadius.lg, padding: spacing.md, alignItems: 'flex-start' },
   notesLabel: { fontSize: 10, fontWeight: '600', color: colors.mutedForeground, letterSpacing: 0.5, marginBottom: 4 },
   notesText: { fontSize: 14, color: 'rgba(232,234,237,0.8)', lineHeight: 22 },
-  hint: { textAlign: 'center', fontSize: 12, color: 'rgba(139,145,158,0.5)', marginTop: spacing.sm },
-  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
-  navBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.md, paddingVertical: 10, paddingHorizontal: 16 },
-  navText: { fontSize: 13, fontWeight: '500', color: colors.foreground },
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   navCount: { fontSize: 12, color: colors.mutedForeground, fontWeight: '500' },
   endBtn: { backgroundColor: colors.primary, borderRadius: borderRadius.md, paddingVertical: 10, paddingHorizontal: 20 },
   endBtnText: { fontSize: 13, fontWeight: '600', color: colors.primaryForeground },
