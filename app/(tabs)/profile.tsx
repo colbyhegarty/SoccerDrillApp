@@ -38,15 +38,15 @@ import { ContactsManager } from '../../src/components/ContactsManager';
 import { CustomDrillCard } from '../../src/components/CustomDrillCard';
 import { DrillCard } from '../../src/components/DrillCard';
 import { DrillDetailModal } from '../../src/components/DrillDetailModal';
-import { customDrillToDrill } from '../../src/lib/drillConverter';
 import { clearContacts, Contact, getContacts } from '../../src/lib/contactsStorage';
 import { clearCustomDrills, deleteCustomDrill, getCustomDrills } from '../../src/lib/customDrillStorage';
+import { customDrillToDrill } from '../../src/lib/drillConverter';
 import { deleteSession, duplicateSession, getSessions } from '../../src/lib/sessionStorage';
 import { clearAllData, getSavedDrills, getUserProfile, removeDrill, saveUserProfile } from '../../src/lib/storage';
 import { useTheme } from '../../src/theme/ThemeContext';
 import { borderRadius, spacing } from '../../src/theme/colors';
 import { CustomDrill } from '../../src/types/customDrill';
-import { Drill, PdfSettings, defaultPdfSettings, UserProfile } from '../../src/types/drill';
+import { defaultPdfSettings, Drill, PdfSettings, UserProfile } from '../../src/types/drill';
 import { Session } from '../../src/types/session';
 
 type ProfileTab = 'custom' | 'saved' | 'sessions';
@@ -68,6 +68,7 @@ export default function ProfileScreen() {
   const [hasChanges, setHasChanges] = useState(false);
   const [gridCols, setGridCols] = useState<1 | 2>(2);
   const [pdfSettings, setPdfSettings] = useState<PdfSettings>(defaultPdfSettings);
+  const [showCameraIcon, setShowCameraIcon] = useState(false);
 
   useFocusEffect(useCallback(() => { loadData(); }, []));
 
@@ -100,6 +101,7 @@ export default function ProfileScreen() {
   };
 
   const handlePickAvatar = async () => {
+    setShowCameraIcon(false);
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -325,26 +327,36 @@ export default function ProfileScreen() {
       <ScrollView style={ps.scrollView} contentContainerStyle={ps.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Profile Card */}
         <View style={[ps.profileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={[ps.banner, { backgroundColor: colors.primary }]} />
           <View style={ps.profileBody}>
-            <View style={ps.avatarRow}>
-              <TouchableOpacity style={[ps.avatar, { backgroundColor: colors.primary, borderColor: colors.card }]} onPress={handlePickAvatar}>
+            <View style={ps.avatarCentered}>
+              <TouchableOpacity style={[ps.avatar, { backgroundColor: colors.primary, borderColor: colors.card }]} onPress={() => setShowCameraIcon(prev => !prev)}>
                 {profile.avatarUrl ? (
-                  <Image source={{ uri: profile.avatarUrl }} style={{ width: 64, height: 64, borderRadius: 32 }} />
+                  <Image source={{ uri: profile.avatarUrl }} style={{ width: 72, height: 72, borderRadius: 36 }} />
                 ) : (
                   <Text style={[ps.avatarText, { color: colors.primaryForeground }]}>{getInitials(profile.name)}</Text>
                 )}
-                <View style={ps.cameraOverlay}><Camera size={14} color="#fff" /></View>
+                {showCameraIcon && (
+                  <TouchableOpacity style={ps.cameraOverlay} onPress={(e) => { e.stopPropagation(); handlePickAvatar(); }}>
+                    <Camera size={14} color="#fff" />
+                  </TouchableOpacity>
+                )}
               </TouchableOpacity>
-              <View style={ps.profileInfo}>
-                <Text style={[ps.profileName, { color: colors.foreground }]}>{profile.name || 'Coach'}</Text>
-                <Text style={[ps.profileTeam, { color: colors.mutedForeground }]}>{profile.teamName || 'No team set'}</Text>
-              </View>
+              <Text style={[ps.profileName, { color: colors.foreground }]}>{profile.name || 'Coach'}</Text>
+              {profile.teamName ? <Text style={[ps.profileTeam, { color: colors.mutedForeground }]}>{profile.teamName}</Text> : null}
             </View>
             <View style={ps.statsRow}>
-              <View style={ps.statBox}><Text style={[ps.statNumber, { color: colors.foreground }]}>{customDrills.length}</Text><Text style={[ps.statLabel, { color: colors.mutedForeground }]}>My Drills</Text></View>
-              <View style={ps.statBox}><Text style={[ps.statNumber, { color: colors.foreground }]}>{savedDrills.length}</Text><Text style={[ps.statLabel, { color: colors.mutedForeground }]}>Saved</Text></View>
-              <View style={ps.statBox}><Text style={[ps.statNumber, { color: colors.foreground }]}>{sessions.length}</Text><Text style={[ps.statLabel, { color: colors.mutedForeground }]}>Sessions</Text></View>
+              <View style={[ps.statBox, { backgroundColor: colors.primaryLight }]}>
+                <Text style={[ps.statNumber, { color: colors.primary }]}>{customDrills.length}</Text>
+                <Text style={[ps.statLabel, { color: colors.mutedForeground }]}>My Drills</Text>
+              </View>
+              <View style={[ps.statBox, { backgroundColor: colors.primaryLight }]}>
+                <Text style={[ps.statNumber, { color: colors.primary }]}>{savedDrills.length}</Text>
+                <Text style={[ps.statLabel, { color: colors.mutedForeground }]}>Saved</Text>
+              </View>
+              <View style={[ps.statBox, { backgroundColor: colors.primaryLight }]}>
+                <Text style={[ps.statNumber, { color: colors.primary }]}>{sessions.length}</Text>
+                <Text style={[ps.statLabel, { color: colors.mutedForeground }]}>Sessions</Text>
+              </View>
             </View>
           </View>
         </View>
@@ -469,18 +481,16 @@ const ps = StyleSheet.create({
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: spacing.md, paddingTop: spacing.lg, paddingBottom: 120 },
   profileCard: { borderRadius: borderRadius.xl, borderWidth: 1, overflow: 'hidden', marginBottom: spacing.lg },
-  banner: { height: 80, opacity: 0.7 },
-  profileBody: { paddingHorizontal: spacing.md, paddingBottom: spacing.md },
-  avatarRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.md, marginTop: -32 },
-  avatar: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', borderWidth: 3, overflow: 'hidden' },
-  avatarText: { fontSize: 22, fontWeight: '700' },
-  cameraOverlay: { position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
-  profileInfo: { flex: 1, paddingBottom: 4 },
-  profileName: { fontSize: 18, fontWeight: '700' },
-  profileTeam: { fontSize: 13, marginTop: 2 },
-  statsRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
-  statBox: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: borderRadius.md, backgroundColor: 'rgba(139, 145, 158, 0.1)' },
-  statNumber: { fontSize: 18, fontWeight: '700' },
+  profileBody: { paddingHorizontal: spacing.md, paddingVertical: spacing.lg },
+  avatarCentered: { alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg },
+  avatar: { width: 72, height: 72, borderRadius: 36, justifyContent: 'center', alignItems: 'center', borderWidth: 3, overflow: 'hidden' },
+  avatarText: { fontSize: 26, fontWeight: '700' },
+  cameraOverlay: { position: 'absolute', top: 17, left: 17, width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
+  profileName: { fontSize: 20, fontWeight: '700', textAlign: 'center' },
+  profileTeam: { fontSize: 13, textAlign: 'center' },
+  statsRow: { flexDirection: 'row', gap: spacing.sm },
+  statBox: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: borderRadius.md },
+  statNumber: { fontSize: 20, fontWeight: '700' },
   statLabel: { fontSize: 11, marginTop: 2 },
   tabBar: { flexDirection: 'row', borderRadius: borderRadius.md, padding: 4, marginBottom: spacing.md },
   tabItem: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: borderRadius.sm },

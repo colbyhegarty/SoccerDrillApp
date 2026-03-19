@@ -35,6 +35,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 export default function DrillEditorScreen() {
   const router = useRouter();
   const { colors: tc, isDark } = useTheme();
+  const e = create_e(tc);
   const params = useLocalSearchParams<{ editId?: string; templateId?: string }>();
 
   const [tool, setTool] = useState<EditorState['tool']>('select');
@@ -238,26 +239,26 @@ export default function DrillEditorScreen() {
   );
 }
 
-const e = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#151823' },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: '#2a3142' },
+function create_e(tc: any) { return StyleSheet.create({
+  container: { flex: 1, backgroundColor: tc.background },
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: tc.border },
   backBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: '#e8eaed' },
-  saveHeaderBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#4a9d6e', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: tc.foreground },
+  saveHeaderBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: tc.primary, justifyContent: 'center', alignItems: 'center' },
   content: { padding: spacing.md, paddingBottom: 120, gap: 0 },
-  sectionToggle: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1e2433', borderWidth: 1, borderColor: '#2a3142', borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: 12, marginTop: spacing.sm },
+  sectionToggle: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: tc.card, borderWidth: 1, borderColor: tc.border, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: 12, marginTop: spacing.sm },
   sectionToggleOpen: { borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderBottomWidth: 0 },
-  sectionToggleText: { fontSize: 14, fontWeight: '600', color: '#e8eaed' },
-  sectionBody: { backgroundColor: '#1e2433', borderWidth: 1, borderColor: '#2a3142', borderTopWidth: 0, borderTopLeftRadius: 0, borderTopRightRadius: 0, borderBottomLeftRadius: borderRadius.md, borderBottomRightRadius: borderRadius.md, marginTop: -1 },
+  sectionToggleText: { fontSize: 14, fontWeight: '600', color: tc.foreground },
+  sectionBody: { backgroundColor: tc.card, borderWidth: 1, borderColor: tc.border, borderTopWidth: 0, borderTopLeftRadius: 0, borderTopRightRadius: 0, borderBottomLeftRadius: borderRadius.md, borderBottomRightRadius: borderRadius.md, marginTop: -1 },
   sectionBodyInner: { padding: spacing.md },
   formRow: { flexDirection: 'row', gap: spacing.sm },
   formField: { flex: 1, gap: 4, marginBottom: spacing.sm },
-  formLabel: { fontSize: 11, fontWeight: '500', color: '#8b919e' },
-  formInput: { backgroundColor: '#151823', borderRadius: borderRadius.sm, borderWidth: 1, borderColor: '#2a3142', paddingHorizontal: spacing.sm, paddingVertical: 8, color: '#e8eaed', fontSize: 13 },
+  formLabel: { fontSize: 11, fontWeight: '500', color: tc.mutedForeground },
+  formInput: { backgroundColor: tc.background, borderRadius: borderRadius.sm, borderWidth: 1, borderColor: tc.border, paddingHorizontal: spacing.sm, paddingVertical: 8, color: tc.foreground, fontSize: 13 },
   formTextArea: { height: 80, paddingTop: 8 },
   bottomActions: { flexDirection: 'row', gap: spacing.sm, paddingTop: spacing.lg },
-  clearBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1, borderColor: '#2a3142', borderRadius: borderRadius.md, paddingVertical: 14 },
-  clearBtnText: { fontSize: 14, fontWeight: '500', color: '#e8eaed' },
-  saveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: '#4a9d6e', borderRadius: borderRadius.md, paddingVertical: 14 },
-  saveBtnText: { fontSize: 14, fontWeight: '600', color: '#ffffff' },
-});
+  clearBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1, borderColor: tc.border, borderRadius: borderRadius.md, paddingVertical: 14 },
+  clearBtnText: { fontSize: 14, fontWeight: '500', color: tc.foreground },
+  saveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: tc.primary, borderRadius: borderRadius.md, paddingVertical: 14 },
+  saveBtnText: { fontSize: 14, fontWeight: '600', color: tc.primaryForeground },
+}); };

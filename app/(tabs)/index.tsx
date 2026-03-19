@@ -41,6 +41,7 @@ export default function LibraryScreen() {
   // Filter options from Supabase
   const router = useRouter();
   const { colors: tc, isDark } = useTheme();
+  const styles = create_styles(tc);
   const [categories, setCategories] = useState<string[]>([]);
   const [ageGroups, setAgeGroups] = useState<string[]>([]);
   const durations = ['10 min.', '15 min.', '20 min.', '30 min.'];
@@ -408,17 +409,17 @@ export default function LibraryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function create_styles(tc: any) { return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#151823',
+    backgroundColor: tc.background,
   },
   header: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#2a3142',
+    borderBottomColor: tc.border,
   },
   titleRow: {
     flexDirection: 'row',
@@ -430,14 +431,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: borderRadius.md,
-    backgroundColor: '#4a9d6e',
+    backgroundColor: tc.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#e8eaed',
+    color: tc.foreground,
   },
   viewToggleRow: {
     flexDirection: 'row',
@@ -452,15 +453,15 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: borderRadius.sm,
-    backgroundColor: '#1e2433',
+    backgroundColor: tc.card,
     borderWidth: 1,
-    borderColor: '#2a3142',
+    borderColor: tc.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   toggleButtonActive: {
-    backgroundColor: '#4a9d6e',
-    borderColor: '#4a9d6e',
+    backgroundColor: tc.primary,
+    borderColor: tc.primary,
   },
   gridItem: {
     flex: 1,
@@ -478,26 +479,26 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl * 3,
   },
   loadingText: {
-    color: '#8b919e',
+    color: tc.mutedForeground,
     fontSize: 14,
     marginTop: spacing.md,
   },
   errorText: {
-    color: '#dc2626',
+    color: tc.destructive,
     fontSize: 14,
     textAlign: 'center',
     marginBottom: spacing.md,
   },
   retryButton: {
-    backgroundColor: '#1e2433',
+    backgroundColor: tc.card,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#2a3142',
+    borderColor: tc.border,
   },
   retryText: {
-    color: '#e8eaed',
+    color: tc.foreground,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -505,33 +506,33 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#1e2433',
+    backgroundColor: tc.card,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
   },
   emptyTitle: {
-    color: '#e8eaed',
+    color: tc.foreground,
     fontSize: 18,
     fontWeight: '600',
     marginBottom: spacing.xs,
   },
   emptySubtitle: {
-    color: '#8b919e',
+    color: tc.mutedForeground,
     fontSize: 14,
     textAlign: 'center',
   },
   clearFiltersButton: {
     marginTop: spacing.md,
-    backgroundColor: '#1e2433',
+    backgroundColor: tc.card,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#2a3142',
+    borderColor: tc.border,
   },
   clearFiltersText: {
-    color: '#e8eaed',
+    color: tc.foreground,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -543,26 +544,26 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   pageButton: {
-    backgroundColor: '#1e2433',
+    backgroundColor: tc.card,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#2a3142',
+    borderColor: tc.border,
   },
   pageButtonDisabled: {
     opacity: 0.4,
   },
   pageButtonText: {
-    color: '#e8eaed',
+    color: tc.foreground,
     fontSize: 13,
     fontWeight: '500',
   },
   pageButtonTextDisabled: {
-    color: '#8b919e',
+    color: tc.mutedForeground,
   },
   pageInfo: {
-    color: '#8b919e',
+    color: tc.mutedForeground,
     fontSize: 13,
   },
   loadingOverlay: {
@@ -573,8 +574,8 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   loadingOverlayText: {
-    color: '#8b919e',
+    color: tc.mutedForeground,
     fontSize: 14,
     marginTop: spacing.md,
   },
-});
+}); };

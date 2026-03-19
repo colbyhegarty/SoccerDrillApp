@@ -64,6 +64,7 @@ interface DrillDiagramViewProps {
 
 export function DrillDiagramView({ drillJson, animationJson, mode, targetAspectRatio }: DrillDiagramViewProps) {
   const { colors: tc } = useTheme();
+  const ds = create_ds(tc);
   const [svgW, setSvgW] = useState(300);
   const bounds = useMemo(() => {
     const b = calculateBounds(drillJson);
@@ -456,22 +457,22 @@ export function DrillDiagramView({ drillJson, animationJson, mode, targetAspectR
   );
 }
 
-const ds = StyleSheet.create({
+function create_ds(tc: any) { return StyleSheet.create({
   diagramWrap: { width: '100%', borderRadius: borderRadius.lg, overflow: 'hidden' },
   controls: { marginTop: spacing.sm, gap: spacing.sm },
   controlRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, flexWrap: 'wrap' },
-  ctrlBtn: { width: 36, height: 36, borderRadius: borderRadius.sm, backgroundColor: '#1e2433', borderWidth: 1, borderColor: '#2a3142', justifyContent: 'center', alignItems: 'center' },
-  playBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#4a9d6e', justifyContent: 'center', alignItems: 'center' },
+  ctrlBtn: { width: 36, height: 36, borderRadius: borderRadius.sm, backgroundColor: tc.card, borderWidth: 1, borderColor: tc.border, justifyContent: 'center', alignItems: 'center' },
+  playBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: tc.primary, justifyContent: 'center', alignItems: 'center' },
   progressWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  progressBg: { flex: 1, height: 4, backgroundColor: '#2a3142', borderRadius: 2, overflow: 'hidden' },
-  progressFill: { height: 4, backgroundColor: '#4a9d6e', borderRadius: 2 },
-  timeText: { fontSize: 11, color: '#8b919e', fontVariant: ['tabular-nums'], minWidth: 70, textAlign: 'right' },
-  speedBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: borderRadius.sm, borderWidth: 1, borderColor: '#2a3142', backgroundColor: '#1e2433' },
-  speedBtnActive: { backgroundColor: '#4a9d6e', borderColor: '#4a9d6e' },
-  speedText: { fontSize: 12, color: '#8b919e' },
-  speedTextActive: { color: '#ffffff', fontWeight: '600' },
-  loopBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: borderRadius.sm, borderWidth: 1, borderColor: '#2a3142', backgroundColor: '#1e2433' },
-  loopBtnActive: { backgroundColor: '#4a9d6e', borderColor: '#4a9d6e' },
-  loopText: { fontSize: 12, color: '#8b919e' },
-  loopTextActive: { color: '#ffffff', fontWeight: '600' },
-});
+  progressBg: { flex: 1, height: 4, backgroundColor: tc.border, borderRadius: 2, overflow: 'hidden' },
+  progressFill: { height: 4, backgroundColor: tc.primary, borderRadius: 2 },
+  timeText: { fontSize: 11, color: tc.mutedForeground, fontVariant: ['tabular-nums'], minWidth: 70, textAlign: 'right' },
+  speedBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: borderRadius.sm, borderWidth: 1, borderColor: tc.border, backgroundColor: tc.card },
+  speedBtnActive: { backgroundColor: tc.primary, borderColor: tc.primary },
+  speedText: { fontSize: 12, color: tc.mutedForeground },
+  speedTextActive: { color: tc.primaryForeground, fontWeight: '600' },
+  loopBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: borderRadius.sm, borderWidth: 1, borderColor: tc.border, backgroundColor: tc.card },
+  loopBtnActive: { backgroundColor: tc.primary, borderColor: tc.primary },
+  loopText: { fontSize: 12, color: tc.mutedForeground },
+  loopTextActive: { color: tc.primaryForeground, fontWeight: '600' },
+}); };

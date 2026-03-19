@@ -50,6 +50,7 @@ export function DrillFilters({
   isLoading,
 }: DrillFiltersProps) {
   const { colors: tc } = useTheme();
+  const styles = create_styles(tc);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
@@ -330,39 +331,39 @@ export function DrillFilters({
   );
 }
 
-const styles = StyleSheet.create({
+function create_styles(tc: any) { return StyleSheet.create({
   container: {
     gap: spacing.sm,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1e2433',
+    backgroundColor: tc.card,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#2a3142',
+    borderColor: tc.border,
     paddingHorizontal: spacing.md,
     height: 44,
     gap: spacing.sm,
   },
   searchInput: {
     flex: 1,
-    color: '#e8eaed',
+    color: tc.foreground,
     fontSize: 15,
   },
   filtersToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1e2433',
+    backgroundColor: tc.card,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#2a3142',
+    borderColor: tc.border,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
   },
   filtersToggleOpen: {
-    borderColor: '#4a9d6e',
+    borderColor: tc.primary,
   },
   filtersToggleLeft: {
     flexDirection: 'row',
@@ -370,15 +371,15 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   filtersToggleText: {
-    color: '#4a9d6e',
+    color: tc.primary,
     fontSize: 13,
     fontWeight: '500',
   },
   filterControls: {
-    backgroundColor: '#1e2433',
+    backgroundColor: tc.card,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#2a3142',
+    borderColor: tc.border,
     padding: spacing.md,
     gap: spacing.sm,
   },
@@ -394,30 +395,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#151823',
+    backgroundColor: tc.background,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
-    borderColor: '#2a3142',
+    borderColor: tc.border,
     paddingHorizontal: spacing.sm,
     height: 36,
   },
   dropdownOpen: {
-    borderColor: '#4a9d6e',
+    borderColor: tc.primary,
   },
   dropdownText: {
     flex: 1,
-    color: '#8b919e',
+    color: tc.mutedForeground,
     fontSize: 12,
   },
   dropdownTextActive: {
-    color: '#e8eaed',
+    color: tc.foreground,
   },
   dropdownMenu: {
     position: 'relative',
-    backgroundColor: '#1e2433',
+    backgroundColor: tc.card,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
-    borderColor: '#2a3142',
+    borderColor: tc.border,
     marginTop: 4,
     overflow: 'hidden',
   },
@@ -428,17 +429,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#2a3142',
+    borderBottomColor: tc.border,
   },
   dropdownOptionActive: {
-    backgroundColor: 'rgba(74, 157, 110, 0.1)',
+    backgroundColor: tc.primaryLight,
   },
   dropdownOptionText: {
-    color: '#e8eaed',
+    color: tc.foreground,
     fontSize: 12,
   },
   dropdownOptionTextActive: {
-    color: '#4a9d6e',
+    color: tc.primary,
     fontWeight: '600',
   },
   playerCountRow: {
@@ -449,21 +450,21 @@ const styles = StyleSheet.create({
   playerCountInput: {
     width: 60,
     height: 36,
-    backgroundColor: '#151823',
+    backgroundColor: tc.background,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
-    borderColor: '#2a3142',
+    borderColor: tc.border,
     paddingHorizontal: spacing.sm,
-    color: '#e8eaed',
+    color: tc.foreground,
     fontSize: 12,
     textAlign: 'center',
   },
   playerCountDash: {
-    color: '#8b919e',
+    color: tc.mutedForeground,
     fontSize: 12,
   },
   playerCountLabel: {
-    color: '#8b919e',
+    color: tc.mutedForeground,
     fontSize: 12,
   },
   clearButton: {
@@ -476,7 +477,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
   },
   clearButtonText: {
-    color: '#8b919e',
+    color: tc.mutedForeground,
     fontSize: 12,
   },
   resultsRow: {
@@ -490,7 +491,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   resultsText: {
-    color: '#8b919e',
+    color: tc.mutedForeground,
     fontSize: 12,
   },
-});
+}); };

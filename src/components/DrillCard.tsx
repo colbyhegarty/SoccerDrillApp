@@ -36,6 +36,7 @@ export function DrillCard({
   onQuickView,
 }: DrillCardProps) {
   const { colors: tc } = useTheme();
+  const styles = create_styles(tc);
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
 
@@ -112,14 +113,6 @@ export function DrillCard({
             )}
           </TouchableOpacity>
 
-          {/* Animated Badge */}
-          {drill.has_animation && (
-            <View style={styles.animatedBadge}>
-              <Text style={styles.animatedDot}>●</Text>
-              <Text style={styles.animatedText}>Animated</Text>
-            </View>
-          )}
-
           {/* Tap overlay with Quick View + View Drill */}
           {showOverlay && (
             <View style={styles.overlay}>
@@ -137,7 +130,7 @@ export function DrillCard({
       </View>
 
       {/* Content */}
-      <View style={[styles.content, compact && styles.contentCompact]}>
+      <TouchableOpacity style={[styles.content, compact && styles.contentCompact]} onPress={() => onPress(drill)} activeOpacity={0.7}>
         {/* Top section: title, tags, description */}
         <View>
           {/* Title */}
@@ -200,17 +193,17 @@ export function DrillCard({
             </View>
           )}
         </View>
-      </View>
+      </TouchableOpacity>
     </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
+function create_styles(tc: any) { return StyleSheet.create({
   card: {
-    backgroundColor: '#1e2433',
+    backgroundColor: tc.card,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: '#2a3142',
+    borderColor: tc.border,
     marginHorizontal: CARD_MARGIN,
     marginVertical: spacing.sm,
     overflow: 'hidden',
@@ -222,7 +215,7 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     aspectRatio: 4 / 3,
-    backgroundColor: '#63b043',
+    backgroundColor: tc.fieldDark,
     position: 'relative',
   },
   image: {
@@ -241,7 +234,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   placeholderText: {
-    color: '#8b919e',
+    color: tc.mutedForeground,
     fontSize: 14,
   },
   bookmarkButton: {
@@ -256,7 +249,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bookmarkButtonSaved: {
-    backgroundColor: '#4a9d6e',
+    backgroundColor: tc.primary,
   },
   animatedBadge: {
     position: 'absolute',
@@ -264,18 +257,18 @@ const styles = StyleSheet.create({
     right: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#d4a641',
+    backgroundColor: tc.accent,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
     gap: 4,
   },
   animatedDot: {
-    color: '#151823',
+    color: tc.background,
     fontSize: 8,
   },
   animatedText: {
-    color: '#151823',
+    color: tc.background,
     fontSize: 11,
     fontWeight: '500',
   },
@@ -287,7 +280,7 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   title: {
-    color: '#e8eaed',
+    color: tc.foreground,
     fontSize: 16,
     fontWeight: '600',
     marginBottom: spacing.sm,
@@ -312,7 +305,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   description: {
-    color: '#8b919e',
+    color: tc.mutedForeground,
     fontSize: 13,
     lineHeight: 18,
     marginBottom: spacing.sm,
@@ -328,7 +321,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   metaText: {
-    color: '#8b919e',
+    color: tc.mutedForeground,
     fontSize: 11,
   },
   overlay: {
@@ -347,12 +340,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   overlayBtnWhiteText: {
-    color: '#4a9d6e',
+    color: tc.primary,
     fontSize: 13,
     fontWeight: '600',
   },
   overlayBtnGreen: {
-    backgroundColor: '#4a9d6e',
+    backgroundColor: tc.primary,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 8,
@@ -362,4 +355,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-});
+}); };

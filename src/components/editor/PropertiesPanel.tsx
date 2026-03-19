@@ -21,6 +21,7 @@ const actionColors: Record<string, string> = {
 
 export function PropertiesPanel({ diagram, selectedEntity, onDiagramChange, onDeleteSelected }: PropertiesPanelProps) {
   const { colors: tc } = useTheme();
+  const p = create_p(tc);
   const totalEntities = diagram.players.length + diagram.cones.length + diagram.balls.length + diagram.goals.length;
 
   const toggleMarkings = (val: boolean) => {
@@ -163,23 +164,23 @@ export function PropertiesPanel({ diagram, selectedEntity, onDiagramChange, onDe
   );
 }
 
-const p = StyleSheet.create({
+function create_p(tc: any) { return StyleSheet.create({
   container: { maxHeight: 350 },
   content: { padding: spacing.sm, gap: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  label: { fontSize: 13, color: '#e8eaed' },
-  divider: { height: 1, backgroundColor: '#2a3142' },
-  sectionLabel: { fontSize: 9, fontWeight: '700', color: '#8b919e', letterSpacing: 1 },
+  label: { fontSize: 13, color: tc.foreground },
+  divider: { height: 1, backgroundColor: tc.border },
+  sectionLabel: { fontSize: 9, fontWeight: '700', color: tc.mutedForeground, letterSpacing: 1 },
   selectedHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   deleteBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(239,68,68,0.15)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: borderRadius.sm },
   deleteText: { fontSize: 11, color: '#ef4444' },
-  selectedBox: { backgroundColor: '#1e2433', borderRadius: borderRadius.sm, borderWidth: 1, borderColor: 'rgba(74,157,110,0.3)', padding: spacing.sm },
-  selectedText: { fontSize: 13, color: '#e8eaed' },
-  entityRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#1e2433', borderRadius: borderRadius.sm, borderWidth: 1, borderColor: '#2a3142', paddingVertical: 8, paddingHorizontal: 10 },
+  selectedBox: { backgroundColor: tc.card, borderRadius: borderRadius.sm, borderWidth: 1, borderColor: 'rgba(74,157,110,0.3)', padding: spacing.sm },
+  selectedText: { fontSize: 13, color: tc.foreground },
+  entityRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: tc.card, borderRadius: borderRadius.sm, borderWidth: 1, borderColor: tc.border, paddingVertical: 8, paddingHorizontal: 10 },
   entityRowSel: { borderColor: 'rgba(74,157,110,0.5)' },
   entityDot: { width: 8, height: 8, borderRadius: 4 },
-  entityName: { fontSize: 12, fontWeight: '500', color: '#e8eaed' },
-  entityDetail: { fontSize: 11, color: '#8b919e' },
+  entityName: { fontSize: 12, fontWeight: '500', color: tc.foreground },
+  entityDetail: { fontSize: 11, color: tc.mutedForeground },
   entityX: { fontSize: 18, color: '#ef4444', fontWeight: '400', paddingHorizontal: 4 },
-  emptyText: { fontSize: 11, color: '#8b919e', fontStyle: 'italic', paddingVertical: spacing.sm },
-});
+  emptyText: { fontSize: 11, color: tc.mutedForeground, fontStyle: 'italic', paddingVertical: spacing.sm },
+}); };

@@ -30,6 +30,7 @@ interface ShareSessionModalProps {
 
 export function ShareSessionModal({ session, drillDetails, isOpen, onClose }: ShareSessionModalProps) {
   const { colors: tc } = useTheme();
+  const st = create_st(tc);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [pdfSettings, setPdfSettings] = useState<PdfSettings>(defaultPdfSettings);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -210,10 +211,10 @@ export function ShareSessionModal({ session, drillDetails, isOpen, onClose }: Sh
   );
 }
 
-const st = StyleSheet.create({
+function create_st(tc: any) { return StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   sheet: {
-    backgroundColor: '#151823',
+    backgroundColor: tc.background,
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     paddingBottom: 40,
@@ -227,14 +228,14 @@ const st = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
   },
-  sheetTitle: { fontSize: 18, fontWeight: '700', color: '#e8eaed' },
-  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#1e2433', justifyContent: 'center', alignItems: 'center' },
-  subtitle: { fontSize: 13, color: '#8b919e', paddingHorizontal: spacing.lg, marginBottom: spacing.md },
-  subtitleBold: { color: '#e8eaed', fontWeight: '600' },
-  emptyState: { alignItems: 'center', paddingVertical: spacing.xl * 2, marginHorizontal: spacing.lg, borderWidth: 1, borderStyle: 'dashed', borderColor: '#2a3142', borderRadius: borderRadius.lg },
-  emptyIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#1e2433', justifyContent: 'center', alignItems: 'center', marginBottom: spacing.sm },
-  emptyTitle: { fontSize: 14, fontWeight: '600', color: '#e8eaed', marginBottom: spacing.xs },
-  emptySubtitle: { fontSize: 12, color: '#8b919e' },
+  sheetTitle: { fontSize: 18, fontWeight: '700', color: tc.foreground },
+  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: tc.card, justifyContent: 'center', alignItems: 'center' },
+  subtitle: { fontSize: 13, color: tc.mutedForeground, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
+  subtitleBold: { color: tc.foreground, fontWeight: '600' },
+  emptyState: { alignItems: 'center', paddingVertical: spacing.xl * 2, marginHorizontal: spacing.lg, borderWidth: 1, borderStyle: 'dashed', borderColor: tc.border, borderRadius: borderRadius.lg },
+  emptyIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: tc.card, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.sm },
+  emptyTitle: { fontSize: 14, fontWeight: '600', color: tc.foreground, marginBottom: spacing.xs },
+  emptySubtitle: { fontSize: 12, color: tc.mutedForeground },
   contactList: { maxHeight: 300, paddingHorizontal: spacing.lg },
   contactRow: {
     flexDirection: 'row',
@@ -243,28 +244,28 @@ const st = StyleSheet.create({
     padding: spacing.md,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: '#2a3142',
-    backgroundColor: '#1e2433',
+    borderColor: tc.border,
+    backgroundColor: tc.card,
     marginBottom: spacing.sm,
   },
   contactRowSelected: {
-    borderColor: '#4a9d6e',
-    backgroundColor: 'rgba(74,157,110,0.06)',
+    borderColor: tc.primary,
+    backgroundColor: tc.primaryLight,
   },
   contactAvatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#151823',
+    backgroundColor: tc.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
   contactAvatarSelected: {
-    backgroundColor: '#4a9d6e',
+    backgroundColor: tc.primary,
   },
   contactInfo: { flex: 1 },
-  contactName: { fontSize: 14, fontWeight: '500', color: '#e8eaed' },
-  contactDetail: { fontSize: 11, color: '#8b919e', marginTop: 1 },
+  contactName: { fontSize: 14, fontWeight: '500', color: tc.foreground },
+  contactDetail: { fontSize: 11, color: tc.mutedForeground, marginTop: 1 },
   actions: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -280,12 +281,12 @@ const st = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#2a3142',
-    backgroundColor: '#1e2433',
+    borderColor: tc.border,
+    backgroundColor: tc.card,
   },
   actionBtnEmail: {},
   actionBtnText2: {},
   actionBtnDisabled: { opacity: 0.4 },
-  actionBtnText: { fontSize: 13, fontWeight: '600', color: '#4a9d6e' },
-  actionBtnTextDisabled: { color: '#8b919e' },
-});
+  actionBtnText: { fontSize: 13, fontWeight: '600', color: tc.primary },
+  actionBtnTextDisabled: { color: tc.mutedForeground },
+}); };

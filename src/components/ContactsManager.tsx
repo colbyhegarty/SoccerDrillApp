@@ -19,6 +19,7 @@ interface ContactsManagerProps {
 
 export function ContactsManager({ contacts, onContactsChange }: ContactsManagerProps) {
   const { colors: tc } = useTheme();
+  const styles = create_styles(tc);
   const [isAdding, setIsAdding] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -176,7 +177,7 @@ export function ContactsManager({ contacts, onContactsChange }: ContactsManagerP
   );
 }
 
-const styles = StyleSheet.create({
+function create_styles(tc: any) { return StyleSheet.create({
   container: {
     gap: spacing.sm,
   },
@@ -193,7 +194,7 @@ const styles = StyleSheet.create({
   headerLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#e8eaed',
+    color: tc.foreground,
   },
   addButton: {
     flexDirection: 'row',
@@ -204,13 +205,13 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: 12,
-    color: '#4a9d6e',
+    color: tc.primary,
     fontWeight: '500',
   },
   addForm: {
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#2a3142',
+    borderColor: tc.border,
     backgroundColor: 'rgba(139, 145, 158, 0.08)',
     padding: spacing.md,
     gap: spacing.sm,
@@ -221,16 +222,16 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#8b919e',
+    color: tc.mutedForeground,
   },
   formInput: {
-    backgroundColor: '#1e2433',
+    backgroundColor: tc.card,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
-    borderColor: '#2a3142',
+    borderColor: tc.border,
     paddingHorizontal: spacing.sm,
     paddingVertical: 8,
-    color: '#e8eaed',
+    color: tc.foreground,
     fontSize: 14,
   },
   formActions: {
@@ -240,7 +241,7 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     flex: 1,
-    backgroundColor: '#4a9d6e',
+    backgroundColor: tc.primary,
     borderRadius: borderRadius.sm,
     paddingVertical: 8,
     alignItems: 'center',
@@ -248,24 +249,24 @@ const styles = StyleSheet.create({
   saveBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#ffffff',
+    color: tc.primaryForeground,
   },
   cancelBtn: {
-    backgroundColor: '#1e2433',
+    backgroundColor: tc.card,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
-    borderColor: '#2a3142',
+    borderColor: tc.border,
     paddingVertical: 8,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
   },
   cancelBtnText: {
     fontSize: 13,
-    color: '#e8eaed',
+    color: tc.foreground,
   },
   emptyText: {
     fontSize: 12,
-    color: '#8b919e',
+    color: tc.mutedForeground,
     paddingVertical: spacing.sm,
   },
   contactList: {
@@ -277,15 +278,15 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#2a3142',
-    backgroundColor: '#1e2433',
+    borderColor: tc.border,
+    backgroundColor: tc.card,
     padding: 10,
   },
   contactAvatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(74, 157, 110, 0.1)',
+    backgroundColor: tc.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -296,7 +297,7 @@ const styles = StyleSheet.create({
   contactName: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#e8eaed',
+    color: tc.foreground,
   },
   contactDetails: {
     flexDirection: 'row',
@@ -310,9 +311,9 @@ const styles = StyleSheet.create({
   },
   contactDetailText: {
     fontSize: 10,
-    color: '#8b919e',
+    color: tc.mutedForeground,
   },
   deleteBtn: {
     padding: 4,
   },
-});
+}); };

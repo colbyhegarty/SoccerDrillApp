@@ -34,8 +34,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getCustomDrills } from '../src/lib/customDrillStorage';
+import { convertToDrillJson } from '../src/lib/drillConverter';
 import { generateActivityId, getSession, saveSession, updateSession } from '../src/lib/sessionStorage';
 import { supabase } from '../src/lib/supabase';
+import { DrillDiagramView } from '../src/components/DrillDiagramView';
 import { borderRadius, spacing } from '../src/theme/colors';
 import { useTheme } from '../src/theme/ThemeContext';
 import { EquipmentItem, Session, SessionActivity } from '../src/types/session';
@@ -55,6 +57,10 @@ function PickerModal({ visible, mode, value, onConfirm, onCancel }: {
   onCancel: () => void;
 }) {
   const { colors: tc } = useTheme();
+  const pk = create_pk(tc);
+  const s = create_s(tc);
+  const ac = create_ac(tc);
+  const ms = create_ms(tc);
   const [tempValue, setTempValue] = useState(value);
 
   useEffect(() => {
@@ -93,16 +99,16 @@ function PickerModal({ visible, mode, value, onConfirm, onCancel }: {
   );
 }
 
-const pk = StyleSheet.create({
+function create_pk(tc: any) { return StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modal: { backgroundColor: '#151823', borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl, paddingBottom: 30 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: '#2a3142' },
-  title: { fontSize: 16, fontWeight: '600', color: '#e8eaed' },
-  cancelText: { fontSize: 15, color: '#8b919e' },
-  doneText: { fontSize: 15, fontWeight: '600', color: '#4a9d6e' },
+  modal: { backgroundColor: tc.background, borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl, paddingBottom: 30 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: tc.border },
+  title: { fontSize: 16, fontWeight: '600', color: tc.foreground },
+  cancelText: { fontSize: 15, color: tc.mutedForeground },
+  doneText: { fontSize: 15, fontWeight: '600', color: tc.primary },
   pickerContainer: { alignItems: 'center', overflow: 'hidden', paddingHorizontal: spacing.md },
   picker: { width: '100%' },
-});
+}); };
 
 // ── Add Activity Modal ──────────────────────────────────────────────
 interface AddActivityModalProps {
@@ -115,16 +121,22 @@ interface AddActivityModalProps {
 interface DrillOption {
   id: string; name: string; category?: string; difficulty?: string;
   duration?: string; player_count?: string; svg_url?: string;
+  diagramData?: any;
 }
 
 function AddActivityModal({ visible, onClose, onAdd, editingActivity }: AddActivityModalProps) {
   const { colors: tc } = useTheme();
+  const pk = create_pk(tc);
+  const s = create_s(tc);
+  const ac = create_ac(tc);
+  const ms = create_ms(tc);
   const [step, setStep] = useState<'choose' | 'library' | 'custom' | 'quick' | 'edit'>('choose');
   const [drills, setDrills] = useState<DrillOption[]>([]);
   const [customDrillOptions, setCustomDrillOptions] = useState<DrillOption[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<DrillOption | null>(null);
+  const [libraryPage, setLibraryPage] = useState(1);
   const [duration, setDuration] = useState('10');
   const [notes, setNotes] = useState('');
   const [quickTitle, setQuickTitle] = useState('');
@@ -182,12 +194,19 @@ function AddActivityModal({ visible, onClose, onAdd, editingActivity }: AddActiv
           duration: d.formData.duration,
           player_count: d.formData.playerCount,
           svg_url: undefined,
+          diagramData: d.diagramData,
         })));
       })();
     }
   }, [step]);
 
+  const LIBRARY_PER_PAGE = 12;
   const filtered = drills.filter(d => !search || d.name.toLowerCase().includes(search.toLowerCase()));
+  const libraryTotalPages = Math.max(1, Math.ceil(filtered.length / LIBRARY_PER_PAGE));
+  const libraryPaginated = filtered.slice((libraryPage - 1) * LIBRARY_PER_PAGE, libraryPage * LIBRARY_PER_PAGE);
+
+  // Reset page when search changes
+  useEffect(() => { setLibraryPage(1); }, [search]);
 
   const handleSubmit = () => {
     const dur = parseInt(duration) || 10;
@@ -263,8 +282,9 @@ function AddActivityModal({ visible, onClose, onAdd, editingActivity }: AddActiv
                 ) : filtered.length === 0 ? (
                   <Text style={ms.emptyText}>No drills found</Text>
                 ) : (
+                  <>
                   <View style={ms.drillGrid}>
-                    {filtered.slice(0, 20).map(drill => (
+                    {libraryPaginated.map(drill => (
                       <TouchableOpacity
                         key={drill.id}
                         style={[ms.drillCard, selected?.id === drill.id && ms.drillCardSelected]}
@@ -282,6 +302,18 @@ function AddActivityModal({ visible, onClose, onAdd, editingActivity }: AddActiv
                       </TouchableOpacity>
                     ))}
                   </View>
+                  {libraryTotalPages > 1 && (
+                    <View style={ms.paginationRow}>
+                      <TouchableOpacity style={[ms.pageBtn, libraryPage === 1 && { opacity: 0.3 }]} disabled={libraryPage === 1} onPress={() => setLibraryPage(p => p - 1)}>
+                        <Text style={ms.pageBtnText}>‹</Text>
+                      </TouchableOpacity>
+                      <Text style={ms.pageInfo}>{libraryPage} / {libraryTotalPages}</Text>
+                      <TouchableOpacity style={[ms.pageBtn, libraryPage === libraryTotalPages && { opacity: 0.3 }]} disabled={libraryPage === libraryTotalPages} onPress={() => setLibraryPage(p => p + 1)}>
+                        <Text style={ms.pageBtnText}>›</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  </>
                 )}
                 {selected && (
                   <View style={ms.detailSection}>
@@ -306,8 +338,16 @@ function AddActivityModal({ visible, onClose, onAdd, editingActivity }: AddActiv
                         style={[ms.drillCard, selected?.id === drill.id && ms.drillCardSelected]}
                         onPress={() => { setSelected(drill); setDuration(String(parseInt(drill.duration || '') || 15)); }}
                       >
-                        <View style={[ms.drillImg, { justifyContent: 'center', alignItems: 'center' }]}>
-                          <PenTool size={20} color="rgba(255,255,255,0.5)" />
+                        <View style={ms.drillImg}>
+                          {drill.diagramData && (drill.diagramData.players?.length > 0 || drill.diagramData.cones?.length > 0 || drill.diagramData.balls?.length > 0 || drill.diagramData.goals?.length > 0) ? (
+                            <View pointerEvents="none" style={{ width: '100%', borderRadius: 0, overflow: 'hidden' }}>
+                              <DrillDiagramView drillJson={convertToDrillJson(drill.diagramData)} mode="static" targetAspectRatio={4/3} />
+                            </View>
+                          ) : (
+                            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                              <PenTool size={20} color="rgba(255,255,255,0.5)" />
+                            </View>
+                          )}
                         </View>
                         <View style={{ padding: spacing.sm }}>
                           <Text style={ms.drillName} numberOfLines={1}>{drill.name}</Text>
@@ -373,6 +413,10 @@ function ActivityCard({ activity, index, startTime, onMoveUp, onMoveDown, onEdit
   isFirst: boolean; isLast: boolean;
 }) {
   const { colors: tc } = useTheme();
+  const pk = create_pk(tc);
+  const s = create_s(tc);
+  const ac = create_ac(tc);
+  const ms = create_ms(tc);
   const title = activity.title || activity.drill_name || 'Untitled';
   const formatMin = (m: number) => { const h = Math.floor(m / 60); const mm = m % 60; return `${h}:${mm.toString().padStart(2, '0')}`; };
 
@@ -423,6 +467,10 @@ function ActivityCard({ activity, index, startTime, onMoveUp, onMoveDown, onEdit
 export default function SessionEditorScreen() {
   const router = useRouter();
   const { colors: tc, isDark } = useTheme();
+  const pk = create_pk(tc);
+  const s = create_s(tc);
+  const ac = create_ac(tc);
+  const ms = create_ms(tc);
   const params = useLocalSearchParams<{ id?: string }>();
   const isNew = !params.id;
 
@@ -620,78 +668,82 @@ export default function SessionEditorScreen() {
 }
 
 // ── Styles ──────────────────────────────────────────────────────────
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#151823' },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: '#2a3142' },
+function create_s(tc: any) { return StyleSheet.create({
+  container: { flex: 1, backgroundColor: tc.background },
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: tc.border },
   backBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#e8eaed' },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: tc.foreground },
   content: { padding: spacing.md, paddingBottom: 120, gap: spacing.md },
-  section: { backgroundColor: '#1e2433', borderRadius: borderRadius.lg, borderWidth: 1, borderColor: '#2a3142', padding: spacing.md, gap: spacing.sm },
+  section: { backgroundColor: tc.card, borderRadius: borderRadius.lg, borderWidth: 1, borderColor: tc.border, padding: spacing.md, gap: spacing.sm },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionTitle: { fontSize: 11, fontWeight: '600', color: '#8b919e', letterSpacing: 1 },
-  sectionMeta: { fontSize: 12, color: '#8b919e' },
+  sectionTitle: { fontSize: 11, fontWeight: '600', color: tc.mutedForeground, letterSpacing: 1 },
+  sectionMeta: { fontSize: 12, color: tc.mutedForeground },
   fieldGroup: { gap: spacing.xs },
-  label: { fontSize: 12, fontWeight: '500', color: '#e8eaed' },
-  input: { backgroundColor: '#151823', borderRadius: borderRadius.sm, borderWidth: 1, borderColor: '#2a3142', paddingHorizontal: spacing.sm, paddingVertical: 10, color: '#e8eaed', fontSize: 14 },
+  label: { fontSize: 12, fontWeight: '500', color: tc.foreground },
+  input: { backgroundColor: tc.background, borderRadius: borderRadius.sm, borderWidth: 1, borderColor: tc.border, paddingHorizontal: spacing.sm, paddingVertical: 10, color: tc.foreground, fontSize: 14 },
   row: { flexDirection: 'row', gap: spacing.sm },
-  emptyText: { textAlign: 'center', color: '#8b919e', fontSize: 13, paddingVertical: spacing.lg },
-  addDashed: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#2a3142', borderRadius: borderRadius.md, paddingVertical: 12, marginTop: spacing.sm },
-  addDashedText: { fontSize: 13, color: '#8b919e' },
+  emptyText: { textAlign: 'center', color: tc.mutedForeground, fontSize: 13, paddingVertical: spacing.lg },
+  addDashed: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, borderWidth: 1.5, borderStyle: 'dashed', borderColor: tc.border, borderRadius: borderRadius.md, paddingVertical: 12, marginTop: spacing.sm },
+  addDashedText: { fontSize: 13, color: tc.mutedForeground },
   equipList: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  equipChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: '#151823', borderRadius: borderRadius.md, paddingHorizontal: spacing.sm, paddingVertical: 6, borderWidth: 1, borderColor: '#2a3142' },
-  equipText: { fontSize: 13, color: '#e8eaed' },
+  equipChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: tc.background, borderRadius: borderRadius.md, paddingHorizontal: spacing.sm, paddingVertical: 6, borderWidth: 1, borderColor: tc.border },
+  equipText: { fontSize: 13, color: tc.foreground },
   equipAdd: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
-  equipAddBtn: { backgroundColor: '#1e2433', borderWidth: 1, borderColor: '#2a3142', borderRadius: borderRadius.sm, paddingHorizontal: spacing.md, justifyContent: 'center' },
-  equipAddBtnText: { fontSize: 13, color: '#e8eaed', fontWeight: '500' },
-  saveBtn: { backgroundColor: '#4a9d6e', borderRadius: borderRadius.md, paddingVertical: 16, alignItems: 'center' },
-  saveBtnText: { fontSize: 15, fontWeight: '600', color: '#ffffff' },
-});
+  equipAddBtn: { backgroundColor: tc.card, borderWidth: 1, borderColor: tc.border, borderRadius: borderRadius.sm, paddingHorizontal: spacing.md, justifyContent: 'center' },
+  equipAddBtnText: { fontSize: 13, color: tc.foreground, fontWeight: '500' },
+  saveBtn: { backgroundColor: tc.primary, borderRadius: borderRadius.md, paddingVertical: 16, alignItems: 'center' },
+  saveBtnText: { fontSize: 15, fontWeight: '600', color: tc.primaryForeground },
+}); };
 
-const ac = StyleSheet.create({
-  card: { backgroundColor: '#151823', borderRadius: borderRadius.md, borderWidth: 1, borderColor: '#2a3142', padding: spacing.sm, marginBottom: spacing.sm },
+function create_ac(tc: any) { return StyleSheet.create({
+  card: { backgroundColor: tc.background, borderRadius: borderRadius.md, borderWidth: 1, borderColor: tc.border, padding: spacing.sm, marginBottom: spacing.sm },
   topRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   timeline: { alignItems: 'center', paddingTop: 2 },
-  timeText: { fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: '#8b919e', marginBottom: 4 },
-  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#4a9d6e' },
+  timeText: { fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: tc.mutedForeground, marginBottom: 4 },
+  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: tc.primary },
   info: { flex: 1 },
-  title: { fontSize: 14, fontWeight: '600', color: '#e8eaed' },
+  title: { fontSize: 14, fontWeight: '600', color: tc.foreground },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  meta: { fontSize: 11, color: '#8b919e' },
+  meta: { fontSize: 11, color: tc.mutedForeground },
   actions: { flexDirection: 'row', gap: spacing.sm, paddingTop: 2 },
-  diagramWrap: { width: '100%', aspectRatio: 16 / 10, borderRadius: borderRadius.sm, overflow: 'hidden', marginTop: spacing.sm, backgroundColor: '#63b043' },
+  diagramWrap: { width: '100%', aspectRatio: 16 / 10, borderRadius: borderRadius.sm, overflow: 'hidden', marginTop: spacing.sm, backgroundColor: tc.fieldDark },
   diagram: { width: '100%', height: '100%' },
-  desc: { fontSize: 13, color: '#8b919e', marginTop: spacing.xs },
+  desc: { fontSize: 13, color: tc.mutedForeground, marginTop: spacing.xs },
   notesRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, marginTop: spacing.xs, backgroundColor: 'rgba(139,145,158,0.08)', borderRadius: borderRadius.sm, padding: spacing.xs },
-  notesText: { flex: 1, fontSize: 12, color: '#8b919e' },
-});
+  notesText: { flex: 1, fontSize: 12, color: tc.mutedForeground },
+}); };
 
-const ms = StyleSheet.create({
+function create_ms(tc: any) { return StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modal: { backgroundColor: '#151823', borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl, maxHeight: '90%' },
-  mHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.md, borderBottomWidth: 1, borderBottomColor: '#2a3142' },
-  mTitle: { fontSize: 17, fontWeight: '600', color: '#e8eaed' },
+  modal: { backgroundColor: tc.background, borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl, maxHeight: '90%' },
+  mHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.md, borderBottomWidth: 1, borderBottomColor: tc.border },
+  mTitle: { fontSize: 17, fontWeight: '600', color: tc.foreground },
   mBody: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
-  mFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.md, borderTopWidth: 1, borderTopColor: '#2a3142' },
-  backText: { fontSize: 14, color: '#4a9d6e', fontWeight: '500' },
-  submitBtn: { backgroundColor: '#4a9d6e', borderRadius: borderRadius.md, paddingVertical: 10, paddingHorizontal: spacing.lg },
-  submitText: { fontSize: 14, fontWeight: '600', color: '#ffffff' },
+  mFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.md + 8, borderTopWidth: 1, borderTopColor: tc.border },
+  backText: { fontSize: 14, color: tc.primary, fontWeight: '500' },
+  submitBtn: { backgroundColor: tc.primary, borderRadius: borderRadius.md, paddingVertical: 10, paddingHorizontal: spacing.lg },
+  submitText: { fontSize: 14, fontWeight: '600', color: tc.primaryForeground },
   chooseGrid: { gap: spacing.md },
-  chooseCard: { backgroundColor: '#1e2433', borderRadius: borderRadius.lg, borderWidth: 1, borderColor: '#2a3142', padding: spacing.lg, gap: spacing.xs },
-  chooseLabel: { fontSize: 15, fontWeight: '600', color: '#e8eaed' },
-  chooseDesc: { fontSize: 13, color: '#8b919e' },
-  searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e2433', borderRadius: borderRadius.md, borderWidth: 1, borderColor: '#2a3142', paddingHorizontal: spacing.sm, height: 40, gap: spacing.xs },
-  searchInput: { flex: 1, color: '#e8eaed', fontSize: 14 },
-  emptyText: { textAlign: 'center', color: '#8b919e', fontSize: 13, paddingVertical: 40 },
+  chooseCard: { backgroundColor: tc.card, borderRadius: borderRadius.lg, borderWidth: 1, borderColor: tc.border, padding: spacing.lg, gap: spacing.xs },
+  chooseLabel: { fontSize: 15, fontWeight: '600', color: tc.foreground },
+  chooseDesc: { fontSize: 13, color: tc.mutedForeground },
+  searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: tc.card, borderRadius: borderRadius.md, borderWidth: 1, borderColor: tc.border, paddingHorizontal: spacing.sm, height: 40, gap: spacing.xs },
+  searchInput: { flex: 1, color: tc.foreground, fontSize: 14 },
+  emptyText: { textAlign: 'center', color: tc.mutedForeground, fontSize: 13, paddingVertical: 40 },
   drillGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  drillCard: { width: '48%', borderRadius: borderRadius.md, borderWidth: 2, borderColor: '#2a3142', overflow: 'hidden', backgroundColor: '#1e2433' },
-  drillCardSelected: { borderColor: '#4a9d6e' },
-  drillImg: { width: '100%', aspectRatio: 4 / 3 },
-  drillName: { fontSize: 13, fontWeight: '500', color: '#e8eaed' },
-  drillMeta: { fontSize: 10, color: '#8b919e', marginTop: 2 },
-  detailSection: { borderTopWidth: 1, borderTopColor: '#2a3142', paddingTop: spacing.md, marginTop: spacing.md, gap: spacing.sm },
-  fieldLabel: { fontSize: 12, fontWeight: '500', color: '#e8eaed', marginBottom: 4 },
-  fieldInput: { backgroundColor: '#1e2433', borderRadius: borderRadius.sm, borderWidth: 1, borderColor: '#2a3142', paddingHorizontal: spacing.sm, paddingVertical: 10, color: '#e8eaed', fontSize: 14 },
-  editDrillInfo: { backgroundColor: '#1e2433', borderRadius: borderRadius.md, borderWidth: 1, borderColor: '#2a3142', padding: spacing.md },
-  editDrillName: { fontSize: 15, fontWeight: '600', color: '#e8eaed' },
-  editDrillMeta: { fontSize: 12, color: '#8b919e', marginTop: 4 },
-});
+  drillCard: { width: '48%', borderRadius: borderRadius.md, borderWidth: 2, borderColor: tc.border, overflow: 'hidden', backgroundColor: tc.card },
+  drillCardSelected: { borderColor: tc.primary },
+  drillImg: { width: '100%', aspectRatio: 4 / 3, backgroundColor: '#63b043' },
+  drillName: { fontSize: 13, fontWeight: '500', color: tc.foreground },
+  drillMeta: { fontSize: 10, color: tc.mutedForeground, marginTop: 2 },
+  detailSection: { borderTopWidth: 1, borderTopColor: tc.border, paddingTop: spacing.md, marginTop: spacing.md, gap: spacing.sm },
+  fieldLabel: { fontSize: 12, fontWeight: '500', color: tc.foreground, marginBottom: 4 },
+  fieldInput: { backgroundColor: tc.card, borderRadius: borderRadius.sm, borderWidth: 1, borderColor: tc.border, paddingHorizontal: spacing.sm, paddingVertical: 10, color: tc.foreground, fontSize: 14 },
+  editDrillInfo: { backgroundColor: tc.card, borderRadius: borderRadius.md, borderWidth: 1, borderColor: tc.border, padding: spacing.md },
+  editDrillName: { fontSize: 15, fontWeight: '600', color: tc.foreground },
+  editDrillMeta: { fontSize: 12, color: tc.mutedForeground, marginTop: 4 },
+  paginationRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
+  pageBtn: { width: 36, height: 36, borderRadius: borderRadius.sm, backgroundColor: tc.card, borderWidth: 1, borderColor: tc.border, justifyContent: 'center', alignItems: 'center' },
+  pageBtnText: { fontSize: 18, color: tc.foreground, fontWeight: '600' },
+  pageInfo: { fontSize: 13, color: tc.mutedForeground, fontWeight: '500', minWidth: 50, textAlign: 'center' },
+}); };

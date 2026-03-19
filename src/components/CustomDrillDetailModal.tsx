@@ -51,6 +51,7 @@ export function CustomDrillDetailModal({
   onEdit,
 }: CustomDrillDetailModalProps) {
   const { colors: tc } = useTheme();
+  const styles = create_styles(tc);
   const [activeTab, setActiveTab] = useState<TabKey>('setup');
   const translateY = useSharedValue(SCREEN_HEIGHT);
   const opacity = useSharedValue(0);
@@ -379,7 +380,7 @@ export function CustomDrillDetailModal({
   );
 }
 
-const styles = StyleSheet.create({
+function create_styles(tc: any) { return StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -389,7 +390,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modal: {
-    backgroundColor: '#151823',
+    backgroundColor: tc.background,
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     maxHeight: SCREEN_HEIGHT * 0.92,
@@ -402,7 +403,7 @@ const styles = StyleSheet.create({
   handle: {
     width: 40,
     height: 4,
-    backgroundColor: '#2a3142',
+    backgroundColor: tc.border,
     borderRadius: 2,
   },
   closeButton: {
@@ -412,7 +413,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#1e2433',
+    backgroundColor: tc.card,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
@@ -426,7 +427,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#e8eaed',
+    color: tc.foreground,
     marginBottom: spacing.md,
     paddingRight: 50,
   },
@@ -453,11 +454,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: borderRadius.full,
     borderWidth: 1,
-    borderColor: '#2a3142',
+    borderColor: tc.border,
   },
   badgeOutlineText: {
     fontSize: 11,
-    color: '#8b919e',
+    color: tc.mutedForeground,
   },
   diagramSection: {
     marginTop: spacing.md,
@@ -465,11 +466,11 @@ const styles = StyleSheet.create({
   },
   diagramContainer: {
     aspectRatio: 4 / 3,
-    backgroundColor: '#1e2433',
+    backgroundColor: tc.card,
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#2a3142',
+    borderColor: tc.border,
   },
   fieldBg: {
     flex: 1,
@@ -492,12 +493,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   overviewSection: {
-    backgroundColor: 'rgba(74, 157, 110, 0.08)',
+    backgroundColor: tc.primaryLight,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.lg,
     borderWidth: 1,
-    borderColor: 'rgba(74, 157, 110, 0.15)',
+    borderColor: tc.primaryLight,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -509,17 +510,17 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#e8eaed',
+    color: tc.foreground,
   },
   overviewText: {
     fontSize: 14,
     lineHeight: 22,
-    color: '#8b919e',
+    color: tc.mutedForeground,
   },
   tabbedSection: { marginBottom: spacing.lg },
   tabsHeader: {
     flexDirection: 'row',
-    backgroundColor: '#1e2433',
+    backgroundColor: tc.card,
     borderRadius: borderRadius.md,
     padding: 4,
     marginBottom: spacing.md,
@@ -530,13 +531,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.sm,
   },
-  tabActive: { backgroundColor: '#151823' },
+  tabActive: { backgroundColor: tc.background },
   tabContent: {
-    backgroundColor: '#1e2433',
+    backgroundColor: tc.card,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: '#2a3142',
+    borderColor: tc.border,
   },
   bulletItem: {
     flexDirection: 'row',
@@ -544,7 +545,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   bulletPoint: {
-    color: '#4a9d6e',
+    color: tc.primary,
     fontSize: 12,
     marginTop: 2,
   },
@@ -552,12 +553,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     lineHeight: 22,
-    color: '#e8eaed',
+    color: tc.foreground,
   },
   paragraphText: {
     fontSize: 14,
     lineHeight: 22,
-    color: '#e8eaed',
+    color: tc.foreground,
     marginBottom: spacing.sm,
   },
   actionButtons: {
@@ -573,11 +574,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#4a9d6e',
+    borderColor: tc.primary,
   },
   actionButtonOutlineText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4a9d6e',
+    color: tc.primary,
   },
-});
+}); };

@@ -34,6 +34,7 @@ const actionTools: { id: EditorTool; label: string; color: string }[] = [
 
 export function ToolsPanel({ activeTool, onToolChange, pendingActionFrom }: ToolsPanelProps) {
   const { colors: tc } = useTheme();
+  const s = create_s(tc);
   const Btn = ({ id, active, children }: { id: EditorTool; active: boolean; children: React.ReactNode }) => (
     <TouchableOpacity
       style={[s.btn, active && s.btnActive]}
@@ -109,18 +110,18 @@ export function ToolsPanel({ activeTool, onToolChange, pendingActionFrom }: Tool
   );
 }
 
-const s = StyleSheet.create({
+function create_s(tc: any) { return StyleSheet.create({
   container: { gap: spacing.sm, padding: spacing.sm },
-  sectionLabel: { fontSize: 9, fontWeight: '700', color: '#8b919e', letterSpacing: 1.5, marginTop: spacing.xs },
+  sectionLabel: { fontSize: 9, fontWeight: '700', color: tc.mutedForeground, letterSpacing: 1.5, marginTop: spacing.xs },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  btn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#1e2433', borderWidth: 1, borderColor: '#2a3142', borderRadius: borderRadius.sm, paddingVertical: 8, paddingHorizontal: 10 },
+  btn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: tc.card, borderWidth: 1, borderColor: tc.border, borderRadius: borderRadius.sm, paddingVertical: 8, paddingHorizontal: 10 },
   btnActive: { backgroundColor: 'rgba(74,157,110,0.25)', borderColor: 'rgba(74,157,110,0.5)' },
-  btnLabel: { fontSize: 12, color: '#e8eaed' },
+  btnLabel: { fontSize: 12, color: tc.foreground },
   dot: { width: 10, height: 10, borderRadius: 5 },
-  gridLabel: { fontSize: 10, color: '#e8eaed' },
-  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#1e2433', borderWidth: 1, borderColor: '#2a3142', borderLeftWidth: 3, borderRadius: borderRadius.sm, paddingVertical: 8, paddingHorizontal: 10 },
+  gridLabel: { fontSize: 10, color: tc.foreground },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: tc.card, borderWidth: 1, borderColor: tc.border, borderLeftWidth: 3, borderRadius: borderRadius.sm, paddingVertical: 8, paddingHorizontal: 10 },
   actionDot: { width: 8, height: 8, borderRadius: 4 },
   pending: { backgroundColor: 'rgba(250,204,21,0.15)', borderWidth: 1, borderColor: 'rgba(250,204,21,0.4)', borderRadius: borderRadius.sm, padding: spacing.sm },
   pendingText: { fontSize: 10, color: '#facc15', fontWeight: '500' },
-  tip: { fontSize: 10, color: '#8b919e', marginTop: spacing.xs, opacity: 0.6 },
-});
+  tip: { fontSize: 10, color: tc.mutedForeground, marginTop: spacing.xs, opacity: 0.6 },
+}); };

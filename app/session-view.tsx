@@ -28,7 +28,7 @@ import {
   View,
   ViewToken,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DrillDetailModal } from '../src/components/DrillDetailModal';
 import { ShareSessionModal } from '../src/components/ShareSessionModal';
 import { fetchDrillById } from '../src/lib/api';
@@ -58,6 +58,8 @@ function ActivityPage({ activity, startMin, drillData, onViewDrill, loadingDrill
   onViewDrill: (a: SessionActivity) => void; loadingDrillId: string | null; pageWidth: number;
 }) {
   const { colors: tc } = useTheme();
+  const v = create_v(tc);
+  const sm = create_sm(tc);
   const title = activity.title || activity.drill_name || 'Activity';
   return (
     <View style={{ width: pageWidth }}>
@@ -107,6 +109,9 @@ function SessionMode({ session, drillDetails, onExit, onViewDrill, loadingDrillI
   onExit: () => void; onViewDrill: (a: SessionActivity) => void; loadingDrillId: string | null;
 }) {
   const { colors: tc, isDark } = useTheme();
+  const v = create_v(tc);
+  const sm = create_sm(tc);
+  const insets = useSafeAreaInsets();
   const [idx, setIdx] = useState(0);
   const [pageWidth, setPageWidth] = useState(SW);
   const flatListRef = useRef<FlatList>(null);
@@ -141,10 +146,10 @@ function SessionMode({ session, drillDetails, onExit, onViewDrill, loadingDrillI
 
   return (
     <Modal visible animationType="slide" statusBarTranslucent>
-      <SafeAreaView style={sm.container} edges={['top', 'bottom']}
+      <View style={[sm.container, { backgroundColor: tc.background, paddingTop: insets.top, paddingBottom: insets.bottom }]}
         onLayout={(e) => setPageWidth(e.nativeEvent.layout.width)}
       >
-        <StatusBar barStyle="light-content" />
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
         {/* Header */}
         <View style={sm.header}>
           <View style={{ flex: 1 }}>
@@ -179,7 +184,7 @@ function SessionMode({ session, drillDetails, onExit, onViewDrill, loadingDrillI
             <Text style={sm.endBtnText}>{isLast ? 'End Session' : 'Exit'}</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
@@ -187,6 +192,8 @@ function SessionMode({ session, drillDetails, onExit, onViewDrill, loadingDrillI
 // ── Expandable Activity Details ─────────────────────────────────────
 function ActivityDetailsDropdown({ activity, drillData }: { activity: SessionActivity; drillData: Drill | null }) {
   const { colors: tc } = useTheme();
+  const v = create_v(tc);
+  const sm = create_sm(tc);
   const [expanded, setExpanded] = useState(false);
   const setup = drillData?.setup || activity.drill_setup || '';
   const instructions = drillData?.instructions || activity.drill_instructions || '';
@@ -242,6 +249,8 @@ function ActivityDetailsDropdown({ activity, drillData }: { activity: SessionAct
 export default function SessionViewScreen() {
   const router = useRouter();
   const { colors: tc, isDark } = useTheme();
+  const v = create_v(tc);
+  const sm = create_sm(tc);
   const params = useLocalSearchParams<{ id: string }>();
   const [session, setSession] = useState<Session | null>(null);
   const [drillDetails, setDrillDetails] = useState<Record<string, Drill>>({});
@@ -449,100 +458,100 @@ export default function SessionViewScreen() {
   );
 }
 
-const v = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#151823' },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: '#2a3142' },
+function create_v(tc: any) { return StyleSheet.create({
+  container: { flex: 1, backgroundColor: tc.background },
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: tc.border },
   backBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 16, fontWeight: '700', color: '#e8eaed' },
-  headerDate: { fontSize: 11, color: '#8b919e' },
+  headerTitle: { fontSize: 16, fontWeight: '700', color: tc.foreground },
+  headerDate: { fontSize: 11, color: tc.mutedForeground },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  startBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#4a9d6e', paddingHorizontal: 14, paddingVertical: 8, borderRadius: borderRadius.full },
-  startBtnText: { fontSize: 13, fontWeight: '600', color: '#ffffff' },
+  startBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: tc.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: borderRadius.full },
+  startBtnText: { fontSize: 13, fontWeight: '600', color: tc.primaryForeground },
   content: { padding: spacing.md, paddingBottom: 120, gap: spacing.md },
-  overviewCard: { backgroundColor: '#1e2433', borderRadius: borderRadius.xl, borderWidth: 1, borderColor: '#2a3142', padding: spacing.md },
+  overviewCard: { backgroundColor: tc.card, borderRadius: borderRadius.xl, borderWidth: 1, borderColor: tc.border, padding: spacing.md },
   overviewGrid: { flexDirection: 'row', gap: spacing.sm },
-  overviewItem: { flex: 1, alignItems: 'center', gap: spacing.sm, backgroundColor: 'rgba(74,157,110,0.06)', borderRadius: borderRadius.md, padding: spacing.sm },
-  overviewIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#4a9d6e', justifyContent: 'center', alignItems: 'center' },
-  overviewLabel: { fontSize: 9, color: '#8b919e', fontWeight: '600', letterSpacing: 0.5 },
-  overviewValue: { fontSize: 12, fontWeight: '600', color: '#e8eaed' },
-  goalsSection: { marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: '#2a3142' },
+  overviewItem: { flex: 1, alignItems: 'center', gap: spacing.sm, backgroundColor: tc.primaryLight, borderRadius: borderRadius.md, padding: spacing.sm },
+  overviewIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: tc.primary, justifyContent: 'center', alignItems: 'center' },
+  overviewLabel: { fontSize: 9, color: tc.mutedForeground, fontWeight: '600', letterSpacing: 0.5 },
+  overviewValue: { fontSize: 12, fontWeight: '600', color: tc.foreground },
+  goalsSection: { marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: tc.border },
   goalsHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
-  goalsLabel: { fontSize: 10, fontWeight: '600', color: '#8b919e', letterSpacing: 0.5 },
-  goalsText: { fontSize: 13, color: 'rgba(232,234,237,0.8)', lineHeight: 20, paddingLeft: spacing.lg },
+  goalsLabel: { fontSize: 10, fontWeight: '600', color: tc.mutedForeground, letterSpacing: 0.5 },
+  goalsText: { fontSize: 13, color: tc.foreground, lineHeight: 20, paddingLeft: spacing.lg },
   activitiesSection: {},
   activitiesHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
-  activitiesIcon: { width: 28, height: 28, borderRadius: borderRadius.sm, backgroundColor: '#4a9d6e', justifyContent: 'center', alignItems: 'center' },
-  activitiesTitle: { fontSize: 11, fontWeight: '700', color: '#e8eaed', letterSpacing: 1 },
-  activitiesBadge: { backgroundColor: 'rgba(74, 157, 110, 0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: borderRadius.full },
-  activitiesBadgeText: { fontSize: 10, fontWeight: '600', color: '#4a9d6e' },
-  emptyActivities: { backgroundColor: '#1e2433', borderRadius: borderRadius.lg, borderWidth: 1, borderStyle: 'dashed', borderColor: '#2a3142', padding: spacing.xl, alignItems: 'center' },
-  emptyText: { fontSize: 13, color: '#8b919e' },
+  activitiesIcon: { width: 28, height: 28, borderRadius: borderRadius.sm, backgroundColor: tc.primary, justifyContent: 'center', alignItems: 'center' },
+  activitiesTitle: { fontSize: 11, fontWeight: '700', color: tc.foreground, letterSpacing: 1 },
+  activitiesBadge: { backgroundColor: tc.primaryLight, paddingHorizontal: 8, paddingVertical: 2, borderRadius: borderRadius.full },
+  activitiesBadgeText: { fontSize: 10, fontWeight: '600', color: tc.primary },
+  emptyActivities: { backgroundColor: tc.card, borderRadius: borderRadius.lg, borderWidth: 1, borderStyle: 'dashed', borderColor: tc.border, padding: spacing.xl, alignItems: 'center' },
+  emptyText: { fontSize: 13, color: tc.mutedForeground },
   activityRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.sm },
   timelineCol: { alignItems: 'center', width: 40 },
-  timeNode: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#1e2433', borderWidth: 2, borderColor: 'rgba(74,157,110,0.3)', justifyContent: 'center', alignItems: 'center' },
-  timeNodeText: { fontSize: 9, fontWeight: '700', color: '#4a9d6e' },
+  timeNode: { width: 40, height: 40, borderRadius: 20, backgroundColor: tc.card, borderWidth: 2, borderColor: 'rgba(74,157,110,0.3)', justifyContent: 'center', alignItems: 'center' },
+  timeNodeText: { fontSize: 9, fontWeight: '700', color: tc.primary },
   timelineLine: { flex: 1, width: 2, backgroundColor: 'rgba(74,157,110,0.15)', marginTop: 4 },
-  activityCard: { flex: 1, backgroundColor: '#1e2433', borderRadius: borderRadius.lg, borderWidth: 1, borderColor: '#2a3142', padding: spacing.md },
+  activityCard: { flex: 1, backgroundColor: tc.card, borderRadius: borderRadius.lg, borderWidth: 1, borderColor: tc.border, padding: spacing.md },
   actCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs },
-  actCardTitle: { fontSize: 14, fontWeight: '600', color: '#e8eaed', flex: 1, marginRight: spacing.sm },
-  actDurBadge: { backgroundColor: 'rgba(74, 157, 110, 0.1)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: borderRadius.full },
-  actDurText: { fontSize: 10, fontWeight: '600', color: '#4a9d6e' },
-  actDesc: { fontSize: 13, color: '#8b919e', lineHeight: 19 },
-  actDiagram: { width: '100%', aspectRatio: 16 / 10, borderRadius: borderRadius.md, overflow: 'hidden', marginTop: spacing.sm, backgroundColor: '#63b043' },
-  actNotes: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, marginTop: spacing.sm, backgroundColor: 'rgba(139,145,158,0.08)', borderRadius: borderRadius.sm, padding: spacing.sm },
-  actNotesText: { flex: 1, fontSize: 12, color: 'rgba(232,234,237,0.8)' },
+  actCardTitle: { fontSize: 14, fontWeight: '600', color: tc.foreground, flex: 1, marginRight: spacing.sm },
+  actDurBadge: { backgroundColor: tc.primaryLight, paddingHorizontal: 8, paddingVertical: 3, borderRadius: borderRadius.full },
+  actDurText: { fontSize: 10, fontWeight: '600', color: tc.primary },
+  actDesc: { fontSize: 13, color: tc.mutedForeground, lineHeight: 19 },
+  actDiagram: { width: '100%', aspectRatio: 16 / 10, borderRadius: borderRadius.md, overflow: 'hidden', marginTop: spacing.sm, backgroundColor: tc.fieldDark },
+  actNotes: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, marginTop: spacing.sm, backgroundColor: tc.primaryLight, borderRadius: borderRadius.sm, padding: spacing.sm },
+  actNotesText: { flex: 1, fontSize: 12, color: tc.foreground },
   // Dropdown styles
   dropdownContainer: { marginTop: spacing.sm },
-  dropdownToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, paddingHorizontal: spacing.sm, borderRadius: borderRadius.sm, backgroundColor: 'rgba(74,157,110,0.06)', borderWidth: 1, borderColor: 'rgba(74,157,110,0.15)' },
-  dropdownToggleText: { fontSize: 12, fontWeight: '600', color: '#4a9d6e' },
-  dropdownContent: { marginTop: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm, backgroundColor: 'rgba(74,157,110,0.03)', borderRadius: borderRadius.sm, borderWidth: 1, borderColor: 'rgba(74,157,110,0.1)' },
+  dropdownToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, paddingHorizontal: spacing.sm, borderRadius: borderRadius.sm, backgroundColor: tc.primaryLight, borderWidth: 1, borderColor: 'rgba(74,157,110,0.15)' },
+  dropdownToggleText: { fontSize: 12, fontWeight: '600', color: tc.primary },
+  dropdownContent: { marginTop: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm, backgroundColor: 'rgba(74,157,110,0.03)', borderRadius: borderRadius.sm, borderWidth: 1, borderColor: tc.primaryLight },
   dropdownSection: {},
   dropdownSectionHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  dropdownSectionLabel: { fontSize: 10, fontWeight: '700', color: '#4a9d6e', letterSpacing: 0.8 },
+  dropdownSectionLabel: { fontSize: 10, fontWeight: '700', color: tc.primary, letterSpacing: 0.8 },
   dropdownBullet: { flexDirection: 'row', gap: 6, marginBottom: 3 },
   dropdownBulletDot: { color: 'rgba(74,157,110,0.6)', marginTop: 1, fontSize: 11 },
-  dropdownBulletText: { flex: 1, fontSize: 12, color: 'rgba(232,234,237,0.8)', lineHeight: 18 },
+  dropdownBulletText: { flex: 1, fontSize: 12, color: tc.foreground, lineHeight: 18 },
   // Equipment & share
-  equipSection: { backgroundColor: '#1e2433', borderRadius: borderRadius.xl, borderWidth: 1, borderColor: '#2a3142', padding: spacing.md },
+  equipSection: { backgroundColor: tc.card, borderRadius: borderRadius.xl, borderWidth: 1, borderColor: tc.border, padding: spacing.md },
   equipList: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  equipChip: { backgroundColor: '#151823', paddingHorizontal: 14, paddingVertical: 8, borderRadius: borderRadius.full, borderWidth: 1, borderColor: '#2a3142' },
-  equipText: { fontSize: 13, color: '#e8eaed' },
+  equipChip: { backgroundColor: tc.background, paddingHorizontal: 14, paddingVertical: 8, borderRadius: borderRadius.full, borderWidth: 1, borderColor: tc.border },
+  equipText: { fontSize: 13, color: tc.foreground },
   shareRow: { flexDirection: 'row', gap: spacing.sm },
-  shareBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: '#4a9d6e', borderRadius: borderRadius.lg, paddingVertical: 14 },
-  shareBtnText: { fontSize: 14, fontWeight: '600', color: '#ffffff' },
-  shareContactsBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1, borderColor: '#2a3142', borderRadius: borderRadius.lg, paddingVertical: 14 },
-  shareContactsText: { fontSize: 14, fontWeight: '500', color: '#4a9d6e' },
-});
+  shareBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: tc.primary, borderRadius: borderRadius.lg, paddingVertical: 14 },
+  shareBtnText: { fontSize: 14, fontWeight: '600', color: tc.primaryForeground },
+  shareContactsBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1, borderColor: tc.border, borderRadius: borderRadius.lg, paddingVertical: 14 },
+  shareContactsText: { fontSize: 14, fontWeight: '500', color: tc.primary },
+}); };
 
-const sm = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#151823' },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: '#2a3142' },
-  sessionName: { fontSize: 12, color: '#8b919e', fontWeight: '500' },
-  activityCount: { fontSize: 14, fontWeight: '700', color: '#e8eaed', marginTop: 2 },
-  progressBg: { height: 4, backgroundColor: '#2a3142', marginHorizontal: spacing.md, borderRadius: 2 },
-  progressFill: { height: 4, backgroundColor: '#4a9d6e', borderRadius: 2 },
+function create_sm(tc: any) { return StyleSheet.create({
+  container: { flex: 1, backgroundColor: tc.background },
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: tc.border },
+  sessionName: { fontSize: 12, color: tc.mutedForeground, fontWeight: '500' },
+  activityCount: { fontSize: 14, fontWeight: '700', color: tc.foreground, marginTop: 2 },
+  progressBg: { height: 4, backgroundColor: tc.border, marginHorizontal: spacing.md, borderRadius: 2 },
+  progressFill: { height: 4, backgroundColor: tc.primary, borderRadius: 2 },
   slideContent: { padding: spacing.md, paddingBottom: 20, gap: spacing.md },
-  timeBadge: { backgroundColor: 'rgba(74, 157, 110, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: borderRadius.full, alignSelf: 'flex-start' },
-  timeBadgeText: { fontSize: 12, fontWeight: '600', color: '#4a9d6e' },
-  actTitle: { fontSize: 24, fontWeight: '700', color: '#e8eaed' },
+  timeBadge: { backgroundColor: tc.primaryLight, paddingHorizontal: 12, paddingVertical: 6, borderRadius: borderRadius.full, alignSelf: 'flex-start' },
+  timeBadgeText: { fontSize: 12, fontWeight: '600', color: tc.primary },
+  actTitle: { fontSize: 24, fontWeight: '700', color: tc.foreground },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
-  metaText: { fontSize: 14, color: '#8b919e' },
-  descText: { fontSize: 14, color: 'rgba(232,234,237,0.8)', lineHeight: 22 },
-  diagramWrap: { borderRadius: borderRadius.xl, overflow: 'hidden', backgroundColor: '#63b043', aspectRatio: 4 / 3 },
+  metaText: { fontSize: 14, color: tc.mutedForeground },
+  descText: { fontSize: 14, color: tc.foreground, lineHeight: 22 },
+  diagramWrap: { borderRadius: borderRadius.xl, overflow: 'hidden', backgroundColor: tc.fieldDark, aspectRatio: 4 / 3 },
   diagram: { width: '100%', height: '100%' },
-  viewDrillBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1, borderColor: '#2a3142', borderRadius: borderRadius.md, paddingVertical: 12 },
-  viewDrillText: { fontSize: 14, color: '#4a9d6e', fontWeight: '500' },
-  sectionCard: { backgroundColor: '#1e2433', borderRadius: borderRadius.xl, borderWidth: 1, borderColor: '#2a3142', padding: spacing.md },
+  viewDrillBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1, borderColor: tc.border, borderRadius: borderRadius.md, paddingVertical: 12 },
+  viewDrillText: { fontSize: 14, color: tc.primary, fontWeight: '500' },
+  sectionCard: { backgroundColor: tc.card, borderRadius: borderRadius.xl, borderWidth: 1, borderColor: tc.border, padding: spacing.md },
   sectionHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
-  sectionLabel: { fontSize: 11, fontWeight: '700', color: '#4a9d6e', letterSpacing: 1 },
+  sectionLabel: { fontSize: 11, fontWeight: '700', color: tc.primary, letterSpacing: 1 },
   bullet: { flexDirection: 'row', gap: spacing.sm, marginBottom: 6 },
   bulletDot: { color: 'rgba(74,157,110,0.6)', marginTop: 2, fontSize: 12 },
-  bulletText: { flex: 1, fontSize: 14, color: 'rgba(232,234,237,0.8)', lineHeight: 22 },
-  notesCard: { flexDirection: 'row', gap: spacing.sm, backgroundColor: 'rgba(139,145,158,0.08)', borderRadius: borderRadius.lg, padding: spacing.md, alignItems: 'flex-start' },
-  notesLabel: { fontSize: 10, fontWeight: '600', color: '#8b919e', letterSpacing: 0.5, marginBottom: 4 },
-  notesText: { fontSize: 14, color: 'rgba(232,234,237,0.8)', lineHeight: 22 },
-  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: '#2a3142' },
-  navCount: { fontSize: 12, color: '#8b919e', fontWeight: '500' },
-  endBtn: { backgroundColor: '#4a9d6e', borderRadius: borderRadius.md, paddingVertical: 10, paddingHorizontal: 20 },
-  endBtnText: { fontSize: 13, fontWeight: '600', color: '#ffffff' },
-});
+  bulletText: { flex: 1, fontSize: 14, color: tc.foreground, lineHeight: 22 },
+  notesCard: { flexDirection: 'row', gap: spacing.sm, backgroundColor: tc.primaryLight, borderRadius: borderRadius.lg, padding: spacing.md, alignItems: 'flex-start' },
+  notesLabel: { fontSize: 10, fontWeight: '600', color: tc.mutedForeground, letterSpacing: 0.5, marginBottom: 4 },
+  notesText: { fontSize: 14, color: tc.foreground, lineHeight: 22 },
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: tc.border },
+  navCount: { fontSize: 12, color: tc.mutedForeground, fontWeight: '500' },
+  endBtn: { backgroundColor: tc.primary, borderRadius: borderRadius.md, paddingVertical: 10, paddingHorizontal: 20 },
+  endBtnText: { fontSize: 13, fontWeight: '600', color: tc.primaryForeground },
+}); };
