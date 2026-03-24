@@ -117,14 +117,6 @@ export function DrillDiagramView({ drillJson, animationJson, mode, targetAspectR
   const fScale = useCallback((fu: number) => (fu / bw) * fw, [bw, fw]);
   const fScaleY = useCallback((fu: number) => (fu / bh) * fh, [bh, fh]);
 
-  // Entity scale: like fScale but capped so entities don't get oversized on tight bounds (e.g. half-field).
-  // When bw covers the full field (100), fScale and eScale are identical.
-  // When bw is small (e.g. 50 for half-field), eScale limits growth to ~65 field-unit equivalent.
-  const eScale = useCallback((fu: number) => {
-    const maxBw = targetAspectRatio ? Math.max(bw * 0.8, 40) : Math.max(bw, 65);
-    return (fu / maxBw) * fw;
-  }, [bw, fw, targetAspectRatio]);
-
   // ── Animation state ───────────────────────────────────────────────
   const keyframes = animationJson?.keyframes || [];
   const totalDuration = useMemo(() => keyframes.reduce((s, kf, i) => i === 0 ? s : s + (kf.duration || 1000), 0), [keyframes]);
@@ -278,7 +270,7 @@ export function DrillDiagramView({ drillJson, animationJson, mode, targetAspectR
 
   const renderCones = () => (drillJson.cones || []).map((c, i) => {
     const p = toSvg(c.position.x, c.position.y);
-    const s = eScale(1.2);
+    const s = fScale(1.2);
     return <Polygon key={`c-${i}`} points={`${p.x},${p.y - s - 2} ${p.x - s},${p.y + s} ${p.x + s},${p.y + s}`} fill={CONE_COLOR} stroke="black" strokeWidth={0.8} />;
   });
 
@@ -323,11 +315,11 @@ export function DrillDiagramView({ drillJson, animationJson, mode, targetAspectR
 
   const renderActions = useMemo(() => {
     const tracker = createTracker(drillJson);
-    const arrowOff = eScale(2.5);
-    const gapOff = eScale(0.8);
-    const lineW = eScale(0.35);
-    const ahW = eScale(1.2);
-    const ahL = eScale(1.0);
+    const arrowOff = fScale(2.5);
+    const gapOff = fScale(0.8);
+    const lineW = fScale(0.35);
+    const ahW = fScale(1.2);
+    const ahL = fScale(1.0);
 
     return (drillJson.actions || []).map((action, i) => {
       let fromFP: Position, toFP: Position;
@@ -362,7 +354,7 @@ export function DrillDiagramView({ drillJson, animationJson, mode, targetAspectR
       const leX = ex - nx * curAhL, leY = ey - ny * curAhL;
 
       if (action.type === 'DRIBBLE') {
-        const amp = eScale(0.8);
+        const amp = fScale(0.8);
         const ddx = leX - sx, ddy = leY - sy, segLen = Math.sqrt(ddx * ddx + ddy * ddy);
         const perpX = segLen > 0 ? -ddy / segLen : 0, perpY = segLen > 0 ? ddx / segLen : 0;
         let pathD = `M ${sx} ${sy}`;
@@ -373,14 +365,14 @@ export function DrillDiagramView({ drillJson, animationJson, mode, targetAspectR
       const dash = action.type === 'RUN' ? '8,4' : undefined;
       return <G key={`a-${i}`} opacity={0.85}><Line x1={sx} y1={sy} x2={leX} y2={leY} stroke={color} strokeWidth={lw} strokeDasharray={dash} strokeLinecap="round" /><Polygon points={`${ex},${ey} ${a1x},${a1y} ${a2x},${a2y}`} fill={color} /></G>;
     });
-  }, [drillJson, toSvg, fScale, eScale, overridePos]);
+  }, [drillJson, toSvg, fScale, overridePos]);
 
   const renderPlayers = () => (drillJson.players || []).map((player, i) => {
     const pp = getEntityPos(player.id, player.position);
     const p = toSvg(pp.x, pp.y);
     const color = PLAYER_COLORS[player.role] || PLAYER_COLORS[player.role?.toLowerCase()] || '#888';
-    const r = eScale(1.8);
-    const sw = Math.max(1, eScale(0.4));
+    const r = fScale(1.8);
+    const sw = Math.max(1, fScale(0.4));
     return (
       <G key={`p-${i}`}>
         <Circle cx={p.x} cy={p.y} r={r} fill={color} stroke="white" strokeWidth={sw} />
@@ -391,8 +383,8 @@ export function DrillDiagramView({ drillJson, animationJson, mode, targetAspectR
   const renderBalls = () => (drillJson.balls || []).map((ball, i) => {
     const bp = getEntityPos(`ball_${i}`, ball.position);
     const p = toSvg(bp.x, bp.y);
-    const r = eScale(1.4);
-    const bsw = Math.max(0.8, eScale(0.3));
+    const r = fScale(1.4);
+    const bsw = Math.max(0.8, fScale(0.3));
     const pentR = r * 0.45;
     const pentPts = Array.from({ length: 5 }, (_, k) => { const a = (-Math.PI / 2) + (2 * Math.PI * k) / 5; return `${p.x + pentR * Math.cos(a)},${p.y + pentR * Math.sin(a)}`; }).join(' ');
     return <G key={`b-${i}`}><Circle cx={p.x} cy={p.y} r={r} fill="white" stroke="black" strokeWidth={bsw} /><Polygon points={pentPts} fill="black" /></G>;
