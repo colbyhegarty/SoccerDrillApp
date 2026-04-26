@@ -241,7 +241,7 @@ function AddActivityModal({ visible, onClose, onAdd, editingActivity }: AddActiv
   return (
     <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
       <View style={ms.backdrop}>
-        <View style={ms.modal}>
+        <KeyboardAvoidingView style={ms.modal} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}>
           {/* Header */}
           <View style={ms.mHeader}>
             <Text style={ms.mTitle}>
@@ -400,7 +400,7 @@ function AddActivityModal({ visible, onClose, onAdd, editingActivity }: AddActiv
               <Text style={ms.submitText}>{editingActivity ? 'Update' : 'Add Activity'}</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );

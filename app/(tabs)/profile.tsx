@@ -25,7 +25,8 @@ import {
 import React, { useCallback, useState } from 'react';
 import {
   Alert,
-  Modal, Pressable,
+  KeyboardAvoidingView,
+  Modal, Platform, Pressable,
   ScrollView, StatusBar,
   StyleSheet,
   Text,
@@ -392,7 +393,7 @@ export default function ProfileScreen() {
       {/* Settings Modal */}
       <Modal visible={settingsOpen} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setSettingsOpen(false)}>
         <Pressable style={ps.settingsBackdrop} onPress={() => setSettingsOpen(false)} />
-        <View style={[ps.settingsSheet, { backgroundColor: colors.background }]}>
+        <KeyboardAvoidingView style={[ps.settingsSheet, { backgroundColor: colors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}>
           <View style={ps.settingsHandle}><View style={[ps.handle, { backgroundColor: colors.border }]} /></View>
           <TouchableOpacity style={[ps.settingsClose, { backgroundColor: colors.card }]} onPress={() => setSettingsOpen(false)}>
             <X size={22} color={colors.foreground} />
@@ -471,7 +472,7 @@ export default function ProfileScreen() {
               <Text style={ps.clearDataText}>Clear All Data</Text>
             </TouchableOpacity>
           </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <DrillDetailModal

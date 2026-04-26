@@ -106,9 +106,10 @@ function ActivityPage({ activity, startMin, drillData, onViewDrill, loadingDrill
 }
 
 // ── Session Mode ────────────────────────────────────────────────────
-function SessionMode({ session, drillDetails, onExit, onViewDrill, loadingDrillId }: {
+function SessionMode({ session, drillDetails, onExit, onViewDrill, loadingDrillId, selectedDrill, onCloseDrill }: {
   session: Session; drillDetails: Record<string, Drill>;
   onExit: () => void; onViewDrill: (a: SessionActivity) => void; loadingDrillId: string | null;
+  selectedDrill: Drill | null; onCloseDrill: () => void;
 }) {
   const { colors: tc, isDark } = useTheme();
   const v = create_v(tc);
@@ -187,6 +188,7 @@ function SessionMode({ session, drillDetails, onExit, onViewDrill, loadingDrillI
           </TouchableOpacity>
         </View>
       </View>
+      <DrillDetailModal drill={selectedDrill} isOpen={selectedDrill !== null} onClose={onCloseDrill} isSaved={false} />
     </Modal>
   );
 }
@@ -465,10 +467,10 @@ export default function SessionViewScreen() {
       </ScrollView>
 
       {sessionMode && (
-        <SessionMode session={session} drillDetails={drillDetails} onExit={() => setSessionMode(false)} onViewDrill={handleViewDrill} loadingDrillId={loadingDrillId} />
+        <SessionMode session={session} drillDetails={drillDetails} onExit={() => setSessionMode(false)} onViewDrill={handleViewDrill} loadingDrillId={loadingDrillId} selectedDrill={selectedDrill} onCloseDrill={() => setSelectedDrill(null)} />
       )}
 
-      <DrillDetailModal drill={selectedDrill} isOpen={selectedDrill !== null} onClose={() => setSelectedDrill(null)} isSaved={false} onSave={() => {}} />
+      {!sessionMode && <DrillDetailModal drill={selectedDrill} isOpen={selectedDrill !== null} onClose={() => setSelectedDrill(null)} isSaved={false} onSave={() => {}} />}
       <ShareSessionModal session={session} drillDetails={drillDetails} isOpen={shareModalOpen} onClose={() => setShareModalOpen(false)} />
       <PaywallModal visible={paywallVisible} onDismiss={dismissPaywall} reason={paywallReason} />
     </SafeAreaView>

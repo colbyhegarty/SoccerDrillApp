@@ -181,10 +181,12 @@ export function DrillDetailModal({ drill, isOpen, onClose, isSaved = false, onSa
 
             {/* Actions */}
             <View style={s.actionButtons}>
-              <TouchableOpacity style={[s.actionButton, isSaved && s.actionButtonSecondary]} onPress={() => onSave?.(drill)}>
-                {isSaved ? <BookmarkCheck size={18} color={tc.foreground} /> : <Bookmark size={18} color={tc.primaryForeground} />}
-                <Text style={[s.actionButtonText, isSaved && s.actionButtonTextSecondary]}>{isSaved ? 'Saved' : 'Save to My Drills'}</Text>
-              </TouchableOpacity>
+              {onSave && (
+                <TouchableOpacity style={[s.actionButton, isSaved && s.actionButtonSecondary]} onPress={() => onSave?.(drill)}>
+                  {isSaved ? <BookmarkCheck size={18} color={tc.foreground} /> : <Bookmark size={18} color={tc.primaryForeground} />}
+                  <Text style={[s.actionButtonText, isSaved && s.actionButtonTextSecondary]}>{isSaved ? 'Saved' : 'Save to My Drills'}</Text>
+                </TouchableOpacity>
+              )}
               {onUseAsTemplate && (
                 <TouchableOpacity style={s.actionButtonOutline} onPress={() => onUseAsTemplate(drill)}>
                   <Sparkles size={18} color={tc.primary} />
