@@ -1,0 +1,25 @@
+{
+  "cli": {
+    "version": ">= 15.0.0"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": false
+      }
+    },
+    "production": {
+      "distribution": "store"
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "c30hegarty@gmail.com",
+        "ascAppId": "6763797389",
+        "appleTeamId": "2H9TPJ4L8B"
+      }
+    }
+  }
+}

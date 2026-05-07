@@ -2,6 +2,7 @@ import { Mail, Phone, Plus, Trash2, User, UserPlus } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
     Alert,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -15,15 +16,23 @@ import { useTheme } from '../theme/ThemeContext';
 interface ContactsManagerProps {
   contacts: Contact[];
   onContactsChange: (contacts: Contact[]) => void;
+  parentScrollRef?: React.RefObject<ScrollView>;
 }
 
-export function ContactsManager({ contacts, onContactsChange }: ContactsManagerProps) {
+export function ContactsManager({ contacts, onContactsChange, parentScrollRef }: ContactsManagerProps) {
   const { colors: tc } = useTheme();
   const styles = create_styles(tc);
   const [isAdding, setIsAdding] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+
+  const scrollToBottom = () => {
+    // Small delay to let the keyboard fully appear
+    setTimeout(() => {
+      parentScrollRef?.current?.scrollToEnd({ animated: true });
+    }, 300);
+  };
 
   const handleAdd = async () => {
     if (!name.trim()) {
@@ -85,6 +94,7 @@ export function ContactsManager({ contacts, onContactsChange }: ContactsManagerP
               placeholderTextColor={tc.mutedForeground}
               value={name}
               onChangeText={setName}
+              onFocus={scrollToBottom}
             />
           </View>
           <View style={styles.formGroup}>
@@ -97,6 +107,7 @@ export function ContactsManager({ contacts, onContactsChange }: ContactsManagerP
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              onFocus={scrollToBottom}
             />
           </View>
           <View style={styles.formGroup}>
@@ -108,6 +119,7 @@ export function ContactsManager({ contacts, onContactsChange }: ContactsManagerP
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"
+              onFocus={scrollToBottom}
             />
           </View>
           <View style={styles.formActions}>

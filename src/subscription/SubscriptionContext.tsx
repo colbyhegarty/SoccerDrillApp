@@ -1,23 +1,22 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
-import Purchases, { PurchasesPackage, CustomerInfo, LOG_LEVEL } from 'react-native-purchases';
+import Purchases, { CustomerInfo, LOG_LEVEL, PurchasesPackage } from 'react-native-purchases';
+import { setUserProperties, track } from '../lib/analytics';
+import { getCustomDrills } from '../lib/customDrillStorage';
+import { getSessions } from '../lib/sessionStorage';
 import {
   EntitlementCheckResult,
   FREE_LIMITS,
   GatedFeature,
-  PRODUCTS,
   SubscriptionPeriod,
   SubscriptionState,
-  SubscriptionTier,
+  SubscriptionTier
 } from '../types/subscription';
-import { getSessions } from '../lib/sessionStorage';
-import { getCustomDrills } from '../lib/customDrillStorage';
 import { isDrillFree } from './freeDrillConfig';
-import { track, setUserProperties } from '../lib/analytics';
 
 // ── RevenueCat Config ──────────────────────────────────────────────
-const REVENUECAT_API_KEY = 'test_oambzhfeqtJWlYMFjwgYhVTAlBr';
+const REVENUECAT_API_KEY = 'appl_agPpQSTiiyCOlhqYogvPgOwegZw';
 const PRO_ENTITLEMENT_ID = 'pro';
 
 // ── Storage Key ────────────────────────────────────────────────────

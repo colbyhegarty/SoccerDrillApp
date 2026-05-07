@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { LayoutGrid, LayoutList, Library } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -37,7 +37,7 @@ import { useTheme } from '../../src/theme/ThemeContext';
 import { Drill } from '../../src/types/drill';
 
 
-const DRILLS_PER_PAGE = 20;
+
 
 export default function LibraryScreen() {
   // Filter options from Supabase
@@ -59,9 +59,9 @@ export default function LibraryScreen() {
   const [isLoadingDrill, setIsLoadingDrill] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const [gridCols, setGridCols] = useState<1 | 2>(1);
   const [quickPreviewDrill, setQuickPreviewDrill] = useState<Drill | null>(null);
+  const flatListRef = useRef<FlatList>(null);
 
   // Warm up backend on mount
   useEffect(() => {
@@ -113,6 +113,17 @@ export default function LibraryScreen() {
         );
         filteredDrills = filterByDuration(filteredDrills, filters.duration);
         filteredDrills = filterByAgeGroup(filteredDrills, filters.age_group);
+
+        // Deterministic shuffle: consistent order that breaks alphabetical grouping
+        // Uses drill ID as seed so order is stable across sessions but looks random
+        if (!filters.search) {
+          filteredDrills = [...filteredDrills].sort((a, b) => {
+            const hashA = a.id.split('').reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0);
+            const hashB = b.id.split('').reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0);
+            return hashA - hashB;
+          });
+        }
+
         setDrillsMeta(filteredDrills);
       }
     } catch (err: any) {
@@ -128,9 +139,9 @@ export default function LibraryScreen() {
     loadDrills();
   }, [loadDrills]);
 
-  // Reset page on filter change
+  // Scroll to top on filter change
   useEffect(() => {
-    setCurrentPage(1);
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
   }, [filters]);
 
   const handleRefresh = () => {
@@ -144,12 +155,9 @@ export default function LibraryScreen() {
     [drillsMeta],
   );
 
-  // Pagination
-  const totalPages = Math.max(1, Math.ceil(drillsForDisplay.length / DRILLS_PER_PAGE));
-  const paginatedDrills = useMemo(() => {
-    const start = (currentPage - 1) * DRILLS_PER_PAGE;
-    return drillsForDisplay.slice(start, start + DRILLS_PER_PAGE);
-  }, [drillsForDisplay, currentPage]);
+  // Show all drills - no batching needed with optimized cards
+  const visibleDrills = drillsForDisplay;
+  
 
   // Drill detail handler
   const handleViewDrill = async (drill: Drill) => {
@@ -271,50 +279,7 @@ export default function LibraryScreen() {
     );
   }, [isLoading, error, filters, loadDrills]);
 
-  // Pagination footer
-  const renderFooter = () => {
-    if (totalPages <= 1) return null;
-    return (
-      <View style={styles.pagination}>
-        <TouchableOpacity
-          style={[styles.pageButton, currentPage === 1 && styles.pageButtonDisabled]}
-          onPress={() => setCurrentPage((p) => Math.max(1, p - 1))}
-          disabled={currentPage === 1}
-        >
-          <Text
-            style={[
-              styles.pageButtonText,
-              currentPage === 1 && styles.pageButtonTextDisabled,
-            ]}
-          >
-            Previous
-          </Text>
-        </TouchableOpacity>
-
-        <Text style={styles.pageInfo}>
-          {currentPage} / {totalPages}
-        </Text>
-
-        <TouchableOpacity
-          style={[
-            styles.pageButton,
-            currentPage === totalPages && styles.pageButtonDisabled,
-          ]}
-          onPress={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-          disabled={currentPage === totalPages}
-        >
-          <Text
-            style={[
-              styles.pageButtonText,
-              currentPage === totalPages && styles.pageButtonTextDisabled,
-            ]}
-          >
-            Next
-          </Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
+  const renderFooter = () => null;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: tc.background }]} edges={['top']}>
@@ -357,12 +322,17 @@ export default function LibraryScreen() {
       </View>
 
       <FlatList
-        data={paginatedDrills}
+        ref={flatListRef}
+        data={visibleDrills}
         keyExtractor={(item) => item.id}
         numColumns={gridCols}
         key={`grid-${gridCols}`}
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
+        removeClippedSubviews={true}
+        initialNumToRender={8}
+        maxToRenderPerBatch={6}
+        windowSize={5}
         renderItem={({ item }) => (
           <View style={gridCols === 2 ? styles.gridItem : undefined}>
             <DrillCard
@@ -556,33 +526,12 @@ function create_styles(tc: any) { return StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  pagination: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.md,
+  loadMoreContainer: {
     paddingVertical: spacing.lg,
+    alignItems: 'center',
+    gap: spacing.sm,
   },
-  pageButton: {
-    backgroundColor: tc.card,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: tc.border,
-  },
-  pageButtonDisabled: {
-    opacity: 0.4,
-  },
-  pageButtonText: {
-    color: tc.foreground,
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  pageButtonTextDisabled: {
-    color: tc.mutedForeground,
-  },
-  pageInfo: {
+  loadMoreText: {
     color: tc.mutedForeground,
     fontSize: 13,
   },

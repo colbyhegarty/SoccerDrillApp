@@ -3,9 +3,12 @@ import { ArrowLeft, ChevronDown, ChevronUp, Save, Trash2 } from 'lucide-react-na
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Alert,
+    FlatList,
     KeyboardAvoidingView,
     LayoutAnimation,
+    Modal,
     Platform,
+    Pressable,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -19,7 +22,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DiagramCanvas } from '../src/components/editor/DiagramCanvas';
 import { PropertiesPanel } from '../src/components/editor/PropertiesPanel';
 import { ToolsPanel } from '../src/components/editor/ToolsPanel';
-import { fetchDrillById, fetchFilterOptions } from '../src/lib/api';
+import { fetchDrillById, fetchFilterOptions, DIFFICULTIES } from '../src/lib/api';
 import { getCustomDrill, getEmptyDiagram, getEmptyFormData, saveCustomDrill, updateCustomDrill } from '../src/lib/customDrillStorage';
 import { borderRadius, spacing } from '../src/theme/colors';
 import { useTheme } from '../src/theme/ThemeContext';
@@ -47,6 +50,7 @@ export default function DrillEditorScreen() {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [snapToGrid, setSnapToGrid] = useState(true);
+  const [dropdownField, setDropdownField] = useState<'category' | 'difficulty' | null>(null);
 
   // Undo history — stores previous diagram states (max 50)
   const undoStack = useRef<DiagramData[]>([]);
@@ -137,6 +141,25 @@ export default function DrillEditorScreen() {
               if (dj.field) {
                 newDiagram.field.type = dj.field.type || 'FULL';
                 newDiagram.field.markings = dj.field.markings ?? dj.field.show_markings ?? true;
+
+                // If half-field with markings, check that all entities fit in the zoomed range (x=25..75, y=50..100)
+                // If any entity is outside, fall back to full field view
+                if (newDiagram.field.type === 'HALF' && newDiagram.field.markings) {
+                  const allPositions: {x: number, y: number}[] = [];
+                  dj.players?.forEach(p => allPositions.push(p.position));
+                  dj.cones?.forEach(c => allPositions.push(c.position));
+                  dj.balls?.forEach(b => allPositions.push(b.position));
+                  dj.goals?.forEach(g => allPositions.push(g.position));
+                  dj.mini_goals?.forEach(g => allPositions.push(g.position));
+                  dj.actions?.forEach(a => { if (a.to_position) allPositions.push(a.to_position); });
+
+                  const fitsInHalf = allPositions.every(p =>
+                    p.x >= 23 && p.x <= 77 && p.y >= 48
+                  );
+                  if (!fitsInHalf) {
+                    newDiagram.field.type = 'FULL';
+                  }
+                }
               }
               if (dj.players) newDiagram.players = dj.players.map((p, i) => ({ id: p.id || `P${i + 1}`, role: (p.role?.toUpperCase() as any) || 'NEUTRAL', position: p.position }));
               if (dj.cones) newDiagram.cones = dj.cones.map((c, i) => ({ id: `cone-${i}`, position: c.position }));
@@ -253,8 +276,24 @@ export default function DrillEditorScreen() {
                   <View style={e.formField}><Text style={e.formLabel}>Drill Name *</Text><TextInput style={e.formInput} value={formData.name} onChangeText={v => handleFormChange('name', v)} placeholder="Enter drill name" placeholderTextColor={tc.mutedForeground} /></View>
                 </View>
                 <View style={e.formRow}>
-                  <View style={e.formField}><Text style={e.formLabel}>Category</Text><TextInput style={e.formInput} value={formData.category} onChangeText={v => handleFormChange('category', v)} placeholder="e.g., Possession" placeholderTextColor={tc.mutedForeground} /></View>
-                  <View style={e.formField}><Text style={e.formLabel}>Difficulty</Text><TextInput style={e.formInput} value={formData.difficulty} onChangeText={v => handleFormChange('difficulty', v)} placeholder="EASY/MEDIUM/HARD" placeholderTextColor={tc.mutedForeground} /></View>
+                  <View style={e.formField}>
+                    <Text style={e.formLabel}>Category</Text>
+                    <TouchableOpacity style={e.formDropdown} onPress={() => setDropdownField('category')} activeOpacity={0.7}>
+                      <Text style={formData.category ? e.formDropdownText : e.formDropdownPlaceholder} numberOfLines={1}>
+                        {formData.category || 'Select category'}
+                      </Text>
+                      <ChevronDown size={14} color={tc.mutedForeground} />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={e.formField}>
+                    <Text style={e.formLabel}>Difficulty</Text>
+                    <TouchableOpacity style={e.formDropdown} onPress={() => setDropdownField('difficulty')} activeOpacity={0.7}>
+                      <Text style={formData.difficulty ? e.formDropdownText : e.formDropdownPlaceholder} numberOfLines={1}>
+                        {formData.difficulty ? formData.difficulty.charAt(0) + formData.difficulty.slice(1).toLowerCase() : 'Select difficulty'}
+                      </Text>
+                      <ChevronDown size={14} color={tc.mutedForeground} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 <View style={e.formRow}>
                   <View style={e.formField}><Text style={e.formLabel}>Age Group</Text><TextInput style={e.formInput} value={formData.ageGroup} onChangeText={v => handleFormChange('ageGroup', v)} placeholder="e.g., U12" placeholderTextColor={tc.mutedForeground} /></View>
@@ -281,6 +320,47 @@ export default function DrillEditorScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Dropdown picker modal */}
+      <Modal visible={dropdownField !== null} transparent animationType="fade" onRequestClose={() => setDropdownField(null)}>
+        <Pressable style={e.dropdownBackdrop} onPress={() => setDropdownField(null)}>
+          <View style={e.dropdownSheet}>
+            <Text style={e.dropdownTitle}>
+              {dropdownField === 'category' ? 'Select Category' : 'Select Difficulty'}
+            </Text>
+            {dropdownField === 'category' && (
+              <FlatList
+                data={categories}
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[e.dropdownItem, formData.category === item && e.dropdownItemActive]}
+                    onPress={() => { handleFormChange('category', item); setDropdownField(null); }}
+                  >
+                    <Text style={[e.dropdownItemText, formData.category === item && e.dropdownItemTextActive]}>{item}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+            {dropdownField === 'difficulty' && (
+              <FlatList
+                data={DIFFICULTIES}
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[e.dropdownItem, formData.difficulty === item && e.dropdownItemActive]}
+                    onPress={() => { handleFormChange('difficulty', item); setDropdownField(null); }}
+                  >
+                    <Text style={[e.dropdownItemText, formData.difficulty === item && e.dropdownItemTextActive]}>
+                      {item.charAt(0) + item.slice(1).toLowerCase()}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -301,7 +381,17 @@ function create_e(tc: any) { return StyleSheet.create({
   formField: { flex: 1, gap: 4, marginBottom: spacing.sm },
   formLabel: { fontSize: 11, fontWeight: '500', color: tc.mutedForeground },
   formInput: { backgroundColor: tc.background, borderRadius: borderRadius.sm, borderWidth: 1, borderColor: tc.border, paddingHorizontal: spacing.sm, paddingVertical: 8, color: tc.foreground, fontSize: 13 },
+  formDropdown: { backgroundColor: tc.background, borderRadius: borderRadius.sm, borderWidth: 1, borderColor: tc.border, paddingHorizontal: spacing.sm, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  formDropdownText: { color: tc.foreground, fontSize: 13, flex: 1 },
+  formDropdownPlaceholder: { color: tc.mutedForeground, fontSize: 13, flex: 1 },
   formTextArea: { height: 80, paddingTop: 8 },
+  dropdownBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl },
+  dropdownSheet: { backgroundColor: tc.card, borderRadius: borderRadius.lg, width: '100%', maxHeight: 400, overflow: 'hidden', borderWidth: 1, borderColor: tc.border },
+  dropdownTitle: { fontSize: 15, fontWeight: '600', color: tc.foreground, paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm },
+  dropdownItem: { paddingHorizontal: spacing.md, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: tc.border },
+  dropdownItemActive: { backgroundColor: tc.primaryLight || tc.primary + '20' },
+  dropdownItemText: { fontSize: 14, color: tc.foreground },
+  dropdownItemTextActive: { color: tc.primary, fontWeight: '600' },
   bottomActions: { flexDirection: 'row', gap: spacing.sm, paddingTop: spacing.lg },
   clearBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1, borderColor: tc.border, borderRadius: borderRadius.md, paddingVertical: 14 },
   clearBtnText: { fontSize: 14, fontWeight: '500', color: tc.foreground },

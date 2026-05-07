@@ -10,7 +10,11 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.colbyhegarty.tactiq"
+      "bundleIdentifier": "com.colbyhegarty.tactiq",
+      "buildNumber": "3",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -31,12 +35,12 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-logo.png",
+          "image": "./assets/images/splash-icon.png",
           "imageWidth": 280,
           "resizeMode": "contain",
           "backgroundColor": "#111821",
           "dark": {
-            "image": "./assets/images/splash-logo.png",
+            "image": "./assets/images/splash-icon.png",
             "imageWidth": 280,
             "backgroundColor": "#111821"
           }
@@ -49,6 +53,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8b4cfc5d-14dd-439a-bdd5-bf86f6c26149"
+      }
     }
   }
 }

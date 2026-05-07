@@ -22,7 +22,7 @@ import {
   Users,
   X
 } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -69,6 +69,7 @@ export default function ProfileScreen() {
   const [selectedDrill, setSelectedDrill] = useState<Drill | null>(null);
   const [activeTab, setActiveTab] = useState<ProfileTab>('custom');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsScrollRef = useRef<ScrollView>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [gridCols, setGridCols] = useState<1 | 2>(2);
   const [pdfSettings, setPdfSettings] = useState<PdfSettings>(defaultPdfSettings);
@@ -392,14 +393,21 @@ export default function ProfileScreen() {
 
       {/* Settings Modal */}
       <Modal visible={settingsOpen} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setSettingsOpen(false)}>
-        <Pressable style={ps.settingsBackdrop} onPress={() => setSettingsOpen(false)} />
-        <KeyboardAvoidingView style={[ps.settingsSheet, { backgroundColor: colors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}>
-          <View style={ps.settingsHandle}><View style={[ps.handle, { backgroundColor: colors.border }]} /></View>
-          <TouchableOpacity style={[ps.settingsClose, { backgroundColor: colors.card }]} onPress={() => setSettingsOpen(false)}>
-            <X size={22} color={colors.foreground} />
-          </TouchableOpacity>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'height' : undefined}>
+          <Pressable style={ps.settingsBackdrop} onPress={() => setSettingsOpen(false)} />
+          <View style={[ps.settingsSheet, { backgroundColor: colors.background, maxHeight: '80%' }]}>
+            <View style={ps.settingsHandle}><View style={[ps.handle, { backgroundColor: colors.border }]} /></View>
+            <TouchableOpacity style={[ps.settingsClose, { backgroundColor: colors.card }]} onPress={() => setSettingsOpen(false)}>
+              <X size={22} color={colors.foreground} />
+            </TouchableOpacity>
 
-          <ScrollView style={{ maxHeight: 550 }} contentContainerStyle={ps.settingsForm} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              ref={settingsScrollRef}
+              contentContainerStyle={ps.settingsForm}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+            >
             <Text style={[ps.settingsTitle, { color: colors.foreground }]}>Settings</Text>
 
             {/* Theme Toggle */}
@@ -459,7 +467,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <View style={[ps.contactsDivider, { backgroundColor: colors.border }]} />
-            <ContactsManager contacts={contacts} onContactsChange={setContacts} />
+            <ContactsManager contacts={contacts} onContactsChange={setContacts} parentScrollRef={settingsScrollRef} />
 
             <TouchableOpacity style={ps.clearDataButton} onPress={() => {
               resetOnboarding();
@@ -472,6 +480,7 @@ export default function ProfileScreen() {
               <Text style={ps.clearDataText}>Clear All Data</Text>
             </TouchableOpacity>
           </ScrollView>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
 
