@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ArrowLeft,
+  Bookmark,
   ChevronDown,
   ChevronUp,
   Clock,
@@ -37,6 +38,7 @@ import { DrillDiagramView } from '../src/components/DrillDiagramView';
 import { getCustomDrills } from '../src/lib/customDrillStorage';
 import { convertToDrillJson } from '../src/lib/drillConverter';
 import { generateActivityId, getSession, saveSession, updateSession } from '../src/lib/sessionStorage';
+import { getSavedDrills } from '../src/lib/storage';
 import { supabase } from '../src/lib/supabase';
 import { borderRadius, spacing } from '../src/theme/colors';
 import { useTheme } from '../src/theme/ThemeContext';
@@ -130,9 +132,10 @@ function AddActivityModal({ visible, onClose, onAdd, editingActivity }: AddActiv
   const s = create_s(tc);
   const ac = create_ac(tc);
   const ms = create_ms(tc);
-  const [step, setStep] = useState<'choose' | 'library' | 'custom' | 'quick' | 'edit'>('choose');
+  const [step, setStep] = useState<'choose' | 'library' | 'custom' | 'quick' | 'edit' | 'saved'>('choose');
   const [drills, setDrills] = useState<DrillOption[]>([]);
   const [customDrillOptions, setCustomDrillOptions] = useState<DrillOption[]>([]);
+  const [savedDrillOptions, setSavedDrillOptions] = useState<DrillOption[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<DrillOption | null>(null);
@@ -200,6 +203,23 @@ function AddActivityModal({ visible, onClose, onAdd, editingActivity }: AddActiv
     }
   }, [step]);
 
+  useEffect(() => {
+    if (step === 'saved') {
+      (async () => {
+        const saved = await getSavedDrills();
+        setSavedDrillOptions(saved.map(d => ({
+          id: d.id,
+          name: d.name,
+          category: d.category,
+          difficulty: d.difficulty,
+          duration: String(d.duration ?? ''),
+          player_count: d.player_count_display || String(d.player_count ?? ''),
+          svg_url: d.svg_url,
+        })));
+      })();
+    }
+  }, [step]);
+
   const LIBRARY_PER_PAGE = 12;
   const filtered = drills.filter(d => !search || d.name.toLowerCase().includes(search.toLowerCase()));
   const libraryTotalPages = Math.max(1, Math.ceil(filtered.length / LIBRARY_PER_PAGE));
@@ -220,7 +240,7 @@ function AddActivityModal({ visible, onClose, onAdd, editingActivity }: AddActiv
         title: quickTitle, description: quickDesc, duration_minutes: dur, activity_notes: notes,
       });
     } else if (selected) {
-      const isLibrary = step === 'library';
+      const isLibrary = step === 'library' || step === 'saved';
       const isCustom = step === 'custom';
       onAdd({
         id: editingActivity?.id || generateActivityId(), sort_order: 0,
@@ -245,7 +265,7 @@ function AddActivityModal({ visible, onClose, onAdd, editingActivity }: AddActiv
           {/* Header */}
           <View style={ms.mHeader}>
             <Text style={ms.mTitle}>
-              {editingActivity ? 'Edit Activity' : step === 'choose' ? 'Add Activity' : step === 'library' ? 'Drill Library' : step === 'quick' ? 'Quick Activity' : 'Edit Activity'}
+              {editingActivity ? 'Edit Activity' : step === 'choose' ? 'Add Activity' : step === 'library' ? 'Drill Library' : step === 'saved' ? 'Saved Drills' : step === 'quick' ? 'Quick Activity' : 'Edit Activity'}
             </Text>
             <TouchableOpacity onPress={onClose}><X size={20} color={tc.foreground} /></TouchableOpacity>
           </View>
@@ -257,6 +277,11 @@ function AddActivityModal({ visible, onClose, onAdd, editingActivity }: AddActiv
                   <Library size={24} color={tc.primary} />
                   <Text style={ms.chooseLabel}>From Library</Text>
                   <Text style={ms.chooseDesc}>Pick a drill from the library</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={ms.chooseCard} onPress={() => setStep('saved')}>
+                  <Bookmark size={24} color={tc.primary} />
+                  <Text style={ms.chooseLabel}>Saved Drills</Text>
+                  <Text style={ms.chooseDesc}>Drills you've saved to your profile</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={ms.chooseCard} onPress={() => setStep('quick')}>
                   <FileText size={24} color={tc.primary} />
@@ -349,6 +374,46 @@ function AddActivityModal({ visible, onClose, onAdd, editingActivity }: AddActiv
                             </View>
                           )}
                         </View>
+                        <View style={{ padding: spacing.sm }}>
+                          <Text style={ms.drillName} numberOfLines={1}>{drill.name}</Text>
+                          <Text style={ms.drillMeta}>{drill.difficulty}{drill.duration ? ` · ${drill.duration}` : ''}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+                {selected && (
+                  <View style={ms.detailSection}>
+                    <Text style={ms.fieldLabel}>Duration (minutes)</Text>
+                    <TextInput style={ms.fieldInput} value={duration} onChangeText={setDuration} keyboardType="number-pad" />
+                    <Text style={ms.fieldLabel}>Notes (optional)</Text>
+                    <TextInput style={[ms.fieldInput, { height: 60 }]} value={notes} onChangeText={setNotes} placeholder="Coaching notes..." placeholderTextColor={tc.mutedForeground} multiline />
+                  </View>
+                )}
+              </View>
+            )}
+
+            {step === 'saved' && (
+              <View style={{ gap: spacing.sm }}>
+                {savedDrillOptions.length === 0 ? (
+                  <Text style={ms.emptyText}>No saved drills yet. Save drills from the library first.</Text>
+                ) : (
+                  <View style={ms.drillGrid}>
+                    {savedDrillOptions.map(drill => (
+                      <TouchableOpacity
+                        key={drill.id}
+                        style={[ms.drillCard, selected?.id === drill.id && ms.drillCardSelected]}
+                        onPress={() => { setSelected(drill); setDuration(String(parseInt(drill.duration || '') || 15)); }}
+                      >
+                        {drill.svg_url ? (
+                          <View style={ms.drillImg}>
+                            <Image source={{ uri: drill.svg_url + '?v=19' }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                          </View>
+                        ) : (
+                          <View style={[ms.drillImg, { justifyContent: 'center', alignItems: 'center' }]}>
+                            <Bookmark size={20} color="rgba(255,255,255,0.5)" />
+                          </View>
+                        )}
                         <View style={{ padding: spacing.sm }}>
                           <Text style={ms.drillName} numberOfLines={1}>{drill.name}</Text>
                           <Text style={ms.drillMeta}>{drill.difficulty}{drill.duration ? ` · ${drill.duration}` : ''}</Text>

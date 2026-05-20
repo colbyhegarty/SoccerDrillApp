@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.colbyhegarty.tactiq",
-      "buildNumber": "6",
+      "buildNumber": "7",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

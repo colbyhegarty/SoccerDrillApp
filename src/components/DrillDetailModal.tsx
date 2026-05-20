@@ -1,12 +1,14 @@
 import { Image } from 'expo-image';
 import {
   Bookmark, BookmarkCheck,
+  CalendarPlus,
   ClipboardList,
   Clock,
   Film, GraduationCap,
   Image as ImageIcon,
   Lightbulb,
   Play,
+  Plus,
   RefreshCw,
   Sparkles,
   Users,
@@ -14,18 +16,22 @@ import {
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  Dimensions, Modal, Pressable,
+  ActivityIndicator,
+  Dimensions, KeyboardAvoidingView, Modal, Platform, Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { getCategoryColor, getDifficultyColor } from '../lib/api';
+import { generateActivityId, getSessions, saveSession, updateSession } from '../lib/sessionStorage';
 import { borderRadius, spacing } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { Drill } from '../types/drill';
+import { Session, SessionActivity } from '../types/session';
 import { DrillDiagramView } from './DrillDiagramView';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -37,15 +43,207 @@ interface DrillDetailModalProps {
   isSaved?: boolean;
   onSave?: (drill: Drill) => void;
   onUseAsTemplate?: (drill: Drill) => void;
+  onAddToSession?: (drill: Drill) => void;
 }
 
 type TabKey = 'setup' | 'instructions' | 'variations' | 'coaching';
 
-export function DrillDetailModal({ drill, isOpen, onClose, isSaved = false, onSave, onUseAsTemplate }: DrillDetailModalProps) {
+// ── Add to Session Modal ─────────────────────────────────────────────
+interface AddToSessionModalProps {
+  visible: boolean;
+  drill: Drill;
+  onClose: () => void;
+}
+
+function AddToSessionModal({ visible, drill, onClose }: AddToSessionModalProps) {
+  const { colors: tc } = useTheme();
+  const s = create_ats(tc);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<'pick' | 'new'>('pick');
+  const [newSessionName, setNewSessionName] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (visible) {
+      setStep('pick');
+      setNewSessionName('');
+      setLoading(true);
+      getSessions().then(all => {
+        all.sort((a, b) => b.created_at.localeCompare(a.created_at));
+        setSessions(all);
+        setLoading(false);
+      });
+    }
+  }, [visible]);
+
+  const buildActivity = (): SessionActivity => ({
+    id: generateActivityId(),
+    sort_order: 0,
+    activity_type: 'library_drill',
+    library_drill_id: drill.id,
+    custom_drill_id: null,
+    title: '',
+    description: '',
+    duration_minutes: typeof drill.duration === 'number' ? drill.duration : parseInt(String(drill.duration || '15')) || 15,
+    activity_notes: '',
+    drill_name: drill.name,
+    drill_svg_url: drill.svg_url,
+    drill_category: drill.category,
+    drill_difficulty: drill.difficulty,
+    drill_player_count: drill.player_count_display || String(drill.player_count || ''),
+  });
+
+  const addToExisting = async (session: Session) => {
+    setSaving(true);
+    const activity = buildActivity();
+    const updated = [...session.activities, { ...activity, sort_order: session.activities.length }];
+    await updateSession(session.id, { activities: updated });
+    setSaving(false);
+    onClose();
+  };
+
+  const createNew = async () => {
+    const name = newSessionName.trim();
+    if (!name) return;
+    setSaving(true);
+    const activity = buildActivity();
+    await saveSession({
+      title: name,
+      session_date: '',
+      session_time: '',
+      team_name: '',
+      session_goals: '',
+      coach_notes: '',
+      equipment: [],
+      activities: [{ ...activity, sort_order: 0 }],
+    });
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        style={s.kavWrapper}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+      >
+        <View style={s.backdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+          <View style={s.sheet}>
+            <View style={s.header}>
+              <Text style={s.title}>{step === 'pick' ? 'Add to Session' : 'New Session'}</Text>
+              <TouchableOpacity onPress={onClose}><X size={20} color={tc.foreground} /></TouchableOpacity>
+            </View>
+
+            {step === 'pick' ? (
+              <View style={s.pickContainer}>
+                {/* Always-visible pinned button */}
+                <View style={s.pinnedBtn}>
+                  <TouchableOpacity style={s.newSessionBtn} onPress={() => setStep('new')}>
+                    <Plus size={18} color={tc.primaryForeground} />
+                    <Text style={s.newSessionBtnText}>New Session</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Scrollable session list */}
+                {loading ? (
+                  <ActivityIndicator size="small" color={tc.primary} style={{ marginTop: 24 }} />
+                ) : sessions.length === 0 ? (
+                  <Text style={s.emptyText}>No existing sessions. Create a new one above.</Text>
+                ) : (
+                  <>
+                    <Text style={s.sectionLabel}>EXISTING SESSIONS</Text>
+                    <ScrollView style={s.sessionList} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
+                      {sessions.map(sess => (
+                        <TouchableOpacity
+                          key={sess.id}
+                          style={s.sessionRow}
+                          onPress={() => addToExisting(sess)}
+                          disabled={saving}
+                        >
+                          <View style={{ flex: 1 }}>
+                            <Text style={s.sessionName} numberOfLines={1}>{sess.title || 'Untitled Session'}</Text>
+                            <Text style={s.sessionMeta}>
+                              {sess.activities.length} activit{sess.activities.length === 1 ? 'y' : 'ies'}
+                              {sess.session_date ? ` · ${sess.session_date}` : ''}
+                            </Text>
+                          </View>
+                          <Plus size={16} color={tc.primary} />
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </>
+                )}
+              </View>
+            ) : (
+              <View style={s.newStepBody}>
+                <Text style={s.fieldLabel}>Session Name</Text>
+                <TextInput
+                  style={s.input}
+                  value={newSessionName}
+                  onChangeText={setNewSessionName}
+                  placeholder="e.g., Tuesday Training"
+                  placeholderTextColor={tc.mutedForeground}
+                  autoFocus
+                  returnKeyType="done"
+                  onSubmitEditing={createNew}
+                />
+                <View style={s.newFooter}>
+                  <TouchableOpacity style={s.backBtn} onPress={() => setStep('pick')}>
+                    <Text style={s.backBtnText}>← Back</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[s.createBtn, (!newSessionName.trim() || saving) && { opacity: 0.4 }]}
+                    onPress={createNew}
+                    disabled={!newSessionName.trim() || saving}
+                  >
+                    <Text style={s.createBtnText}>{saving ? 'Creating...' : 'Create & Add'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+function create_ats(tc: any) { return StyleSheet.create({
+  kavWrapper: { flex: 1, justifyContent: 'flex-end' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: tc.background, borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl, maxHeight: '70%', paddingBottom: 30 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.md, borderBottomWidth: 1, borderBottomColor: tc.border },
+  title: { fontSize: 17, fontWeight: '600', color: tc.foreground },
+  body: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
+  pickContainer: { paddingHorizontal: spacing.md, paddingTop: spacing.md, flex: 1 },
+  pinnedBtn: { marginBottom: spacing.md },
+  sessionList: { flex: 1 },
+  newStepBody: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.md },
+  newSessionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: tc.primary, borderRadius: borderRadius.md, paddingVertical: 14 },
+  newSessionBtnText: { fontSize: 14, fontWeight: '600', color: tc.primaryForeground },
+  sectionLabel: { fontSize: 11, fontWeight: '600', color: tc.mutedForeground, letterSpacing: 1, marginBottom: spacing.sm },
+  emptyText: { textAlign: 'center', color: tc.mutedForeground, fontSize: 13, paddingVertical: 24 },
+  sessionRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: tc.card, borderRadius: borderRadius.md, borderWidth: 1, borderColor: tc.border, paddingHorizontal: spacing.md, paddingVertical: 14, marginBottom: spacing.sm },
+  sessionName: { fontSize: 14, fontWeight: '500', color: tc.foreground },
+  sessionMeta: { fontSize: 11, color: tc.mutedForeground, marginTop: 2 },
+  fieldLabel: { fontSize: 12, fontWeight: '500', color: tc.foreground, marginBottom: spacing.xs },
+  input: { backgroundColor: tc.card, borderRadius: borderRadius.sm, borderWidth: 1, borderColor: tc.border, paddingHorizontal: spacing.sm, paddingVertical: 10, color: tc.foreground, fontSize: 14, marginBottom: spacing.md },
+  newFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  backBtn: { paddingVertical: 10 },
+  backBtnText: { fontSize: 14, color: tc.primary, fontWeight: '500' },
+  createBtn: { backgroundColor: tc.primary, borderRadius: borderRadius.md, paddingVertical: 10, paddingHorizontal: spacing.lg },
+  createBtnText: { fontSize: 14, fontWeight: '600', color: tc.primaryForeground },
+}); };
+
+export function DrillDetailModal({ drill, isOpen, onClose, isSaved = false, onSave, onUseAsTemplate, onAddToSession }: DrillDetailModalProps) {
   const { colors: tc } = useTheme();
   const s = create_s(tc);
   const [viewMode, setViewMode] = useState<'static' | 'animated'>('animated');
   const [activeTab, setActiveTab] = useState<TabKey>('setup');
+  const [addToSessionVisible, setAddToSessionVisible] = useState(false);
   const translateY = useSharedValue(SCREEN_HEIGHT);
   const opacity = useSharedValue(0);
 
@@ -194,9 +392,20 @@ export function DrillDetailModal({ drill, isOpen, onClose, isSaved = false, onSa
                 </TouchableOpacity>
               )}
             </View>
+            <TouchableOpacity style={s.addToSessionBtn} onPress={() => setAddToSessionVisible(true)}>
+              <CalendarPlus size={18} color={tc.primaryForeground} />
+              <Text style={s.addToSessionBtnText}>Add to Session</Text>
+            </TouchableOpacity>
           </ScrollView>
         </View>
       </Animated.View>
+      {drill && (
+        <AddToSessionModal
+          visible={addToSessionVisible}
+          drill={drill}
+          onClose={() => setAddToSessionVisible(false)}
+        />
+      )}
     </Modal>
   );
 }
@@ -247,4 +456,6 @@ function create_s(tc: any) { return StyleSheet.create({
   actionButtonTextSecondary: { color: tc.foreground },
   actionButtonOutline: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: 14, borderRadius: borderRadius.md, borderWidth: 1, borderColor: tc.primary },
   actionButtonOutlineText: { fontSize: 14, fontWeight: '600', color: tc.primary },
+  addToSessionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: tc.primary, paddingVertical: 14, borderRadius: borderRadius.md, marginTop: spacing.sm },
+  addToSessionBtnText: { fontSize: 14, fontWeight: '600', color: tc.primaryForeground },
 }); };
